@@ -1,0 +1,126 @@
+=====================================================================
+ ACTAS PARROQUIALES - VERSION WEB (para usar desde el iPhone)
+=====================================================================
+
+Esta es una versión aparte del programa de escritorio, pensada para
+verse desde el navegador de tu iPhone (Safari) o de cualquier
+computadora. Se conecta a la MISMA base de datos en la nube (Turso)
+que ya configuraste en el programa de escritorio.
+
+QUE SI INCLUYE (por ahora):
+  - Iniciar sesión (mismos usuarios que ya tienes)
+  - Base de Datos: buscar y agregar actas
+  - Intenciones de Misa: capturar por fecha y horario
+  - Agenda de Reservaciones: agregar, ver, registrar pagos/abonos
+  - Directorio de Servicio: agregar y ver colaboradores
+
+QUE NO INCLUYE TODAVIA (se puede agregar después si lo necesitas):
+  - Generar el PDF del acta con el membrete (eso sigue siendo en
+    el programa de escritorio)
+  - Firma digital
+  - Envío por correo o WhatsApp
+  - Corregir un registro ya guardado (por ahora solo se agregan
+    nuevos, igual que "Guardar / Generar" del programa de escritorio)
+
+---------------------------------------------------------------------
+PASO 1: Subir el código a GitHub (una sola vez)
+---------------------------------------------------------------------
+  a) Entra a https://github.com y crea una cuenta gratuita (si no
+     tienes una).
+
+  b) Una vez dentro, haz clic en el botón "+" (arriba a la derecha)
+     y elige "New repository" (Nuevo repositorio).
+
+  c) Ponle un nombre, por ejemplo: actas-parroquiales-web
+     Déjalo como "Public" o "Private" (cualquiera funciona).
+     NO marques ninguna opción de "Add a README" por ahora.
+     Presiona "Create repository".
+
+  d) En la página que aparece, busca el enlace que dice
+     "uploading an existing file" (subir un archivo existente).
+
+  e) Arrastra TODOS los archivos de esta carpeta (app.py, db_web.py,
+     horario_misas.py, requirements.txt, Procfile, y las carpetas
+     "templates" y "static" completas) a esa página de GitHub.
+     Espera a que se suban, y presiona "Commit changes".
+
+---------------------------------------------------------------------
+PASO 2: Crear la cuenta en Render y conectar tu repositorio
+---------------------------------------------------------------------
+  a) Entra a https://render.com y crea una cuenta gratuita
+     (puedes usar la misma cuenta de GitHub para entrar más rápido,
+     dándole clic a "Sign up with GitHub").
+
+  b) Dentro del panel de Render, busca un botón que diga
+     "New +" y elige "Web Service".
+
+  c) Te va a pedir conectar tu cuenta de GitHub (si no lo hiciste ya
+     al entrar) y elegir el repositorio que subiste en el Paso 1
+     (actas-parroquiales-web).
+
+  d) Render va a detectar que es una app de Python. Configura:
+       - Name: el que quieras, por ejemplo "actas-parroquiales"
+       - Region: la más cercana (Oregon o similar)
+       - Branch: main
+       - Build Command: pip install -r requirements.txt
+       - Start Command: gunicorn app:app
+       - Instance Type: Free
+
+  e) NO le des "Create Web Service" todavía -- primero baja a la
+     sección "Environment Variables" (Variables de entorno) y
+     agrega estas 3 (con el botón "Add Environment Variable"):
+
+       TURSO_URL          = (tu URL de Turso, la que empieza con
+                              libsql://...)
+       TURSO_AUTH_TOKEN   = (tu token larguísimo de Turso)
+       SECRET_KEY         = (inventa cualquier texto largo y
+                              aleatorio, por ejemplo:
+                              parroquia-guadalupe-armeria-2026-xyz)
+
+  f) Ahora sí, presiona "Create Web Service". Render va a instalar
+     todo y arrancar tu app -- esto puede tardar 2-5 minutos la
+     primera vez.
+
+  g) Cuando termine, Render te va a dar una dirección web, algo como:
+
+          https://actas-parroquiales.onrender.com
+
+     Esa es la dirección que vas a usar desde tu iPhone.
+
+---------------------------------------------------------------------
+PASO 3: Abrirlo desde tu iPhone y agregarlo a la pantalla de inicio
+---------------------------------------------------------------------
+  a) Abre Safari en tu iPhone y entra a la dirección que te dio
+     Render (la de https://...onrender.com).
+
+  b) Inicia sesión con tu mismo usuario y contraseña de siempre.
+
+  c) Para que se sienta como una app: presiona el botón de compartir
+     (el cuadrito con la flecha hacia arriba, abajo de la pantalla),
+     y elige "Agregar a pantalla de inicio". Se va a crear un ícono
+     igual que cualquier otra app, y al abrirlo ya no se ve la barra
+     de direcciones de Safari.
+
+---------------------------------------------------------------------
+NOTA IMPORTANTE SOBRE LA VERSION GRATUITA
+---------------------------------------------------------------------
+  Si no usas la app por un rato (15-20 minutos sin visitas), Render
+  "duerme" el servicio para ahorrar recursos. La próxima vez que
+  entres, puede tardar 20-30 segundos en "despertar" antes de que
+  cargue la página -- es normal, solo espera un momento.
+
+---------------------------------------------------------------------
+SI ALGO FALLA
+---------------------------------------------------------------------
+  Dentro del panel de Render, en tu servicio, hay una pestaña
+  "Logs" (Registros) que muestra exactamente qué pasó si algo no
+  carga. Si ves un error ahí, mándame una captura y lo resolvemos.
+
+  Los errores más comunes son:
+    - Las variables de entorno TURSO_URL / TURSO_AUTH_TOKEN mal
+      copiadas (revisa que no tengan espacios de más al copiar).
+    - Que el token de Turso haya sido revocado -- en ese caso,
+      genera uno nuevo desde el panel de Turso y actualiza la
+      variable de entorno en Render (no hace falta volver a subir
+      el código, solo cambiar la variable y darle "Manual Deploy").
+=====================================================================
