@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block titulo %}Iniciar sesión{% endblock %}
+{% block contenido %}
+<div class="login-wrap">
+  <div class="login-box tarjeta">
+    <h2>Iniciar sesión</h2>
+    <form method="post">
+      <label>Usuario</label>
+      <input type="text" name="usuario" required autofocus
+             autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="username">
+      <label>Contraseña</label>
+      <input type="password" name="password" required autocomplete="current-password">
+      <button type="submit" class="boton-bloque">Ingresar</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
