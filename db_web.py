@@ -1,22 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-db_web.py
-======================================================
-Capa de acceso a datos para la versión WEB (para verla
-desde el iPhone u otro navegador). A diferencia del
-programa de escritorio, esta versión SIEMPRE usa la base
-de datos en la nube (Turso) -- no tiene modo local, porque
-un servidor web no tiene una "computadora del usuario"
-donde guardar un archivo local.
-
-Las credenciales de Turso se leen de variables de entorno
-(TURSO_URL y TURSO_AUTH_TOKEN), que se configuran en el
-panel de Render (no se escriben en el código, por seguridad).
-
-El esquema de las tablas es EXACTAMENTE el mismo que usa el
-programa de escritorio (db.py), porque ambos leen y escriben
-la misma base de datos de Turso.
-======================================================
 """
 
 import os
