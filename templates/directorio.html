@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block titulo %}Directorio de Servicio{% endblock %}
+{% block contenido %}
+<h2>Directorio de Servicio</h2>
+
+<form class="buscador" method="get">
+  <input type="text" name="q" value="{{ texto }}" placeholder="Buscar por nombre o rama">
+  <button type="submit">Buscar</button>
+</form>
+
+<div class="tarjeta">
+  <h2 style="margin-top:0">Agregar persona</h2>
+  <form method="post">
+    <label>Nombre</label>
+    <input type="text" name="nombre" required>
+    <label>Rama de servicio</label>
+    <input type="text" name="rama_servicio" required placeholder="Catequesis, Coro, Monaguillos...">
+    <label>Teléfono</label>
+    <input type="tel" name="telefono">
+    <label>Correo (opcional)</label>
+    <input type="email" name="correo">
+    <button type="submit" class="boton-bloque">Guardar</button>
+  </form>
+</div>
+
+<div class="lista-tarjetas">
+  {% for c in colaboradores %}
+    <div class="item">
+      <div class="titulo">{{ c.nombre }}</div>
+      <div class="detalle">
+        <span class="chip">{{ c.rama_servicio }}</span>
+        {{ c.telefono }}{% if c.correo %} · {{ c.correo }}{% endif %}
+      </div>
+      <form method="post" action="{{ url_for('eliminar_colaborador', id_colaborador=c.id) }}"
+            onsubmit="return confirm('¿Eliminar a esta persona?')">
+        <button type="submit" class="boton-peligro" style="margin-top:6px">Eliminar</button>
+      </form>
+    </div>
+  {% else %}
+    <p>Sin personas registradas todavía.</p>
+  {% endfor %}
+</div>
+{% endblock %}

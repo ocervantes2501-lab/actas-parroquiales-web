@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block titulo %}Base de Datos{% endblock %}
+{% block contenido %}
+<h2>Base de Datos</h2>
+
+<form class="buscador" method="get">
+  <input type="text" name="q" value="{{ texto }}" placeholder="Buscar por nombre o ID">
+  <button type="submit">Buscar</button>
+</form>
+
+<a class="boton boton-bloque" href="{{ url_for('nuevo_registro') }}">➕ Nueva acta</a>
+
+<div class="lista-tarjetas" style="margin-top:14px">
+  {% for r in registros %}
+    <div class="item">
+      <div class="titulo">#{{ r.id_registro }} — {{ r.nombre_completo }}</div>
+      <div class="detalle">
+        <span class="chip">{{ r.sacramento }}</span>
+        Libro {{ r.num_libro }} · Foja {{ r.num_foja }} · Acta {{ r.num_acta }}<br>
+        {{ r.dia_sacramento }} de {{ r.mes_sacramento }} de {{ r.anio_sacramento }} —
+        {{ r.sacerdote_sacramento }}
+      </div>
+    </div>
+  {% else %}
+    <p>No se encontraron registros.</p>
+  {% endfor %}
+</div>
+{% endblock %}

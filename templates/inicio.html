@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block titulo %}Inicio{% endblock %}
+{% block contenido %}
+<h2>Bienvenido</h2>
+
+<div class="tarjeta">
+  <h2 style="margin-top:0">⚠ Pagos pendientes (próximos 7 días)</h2>
+  {% if proximas %}
+    <div class="lista-tarjetas">
+      {% for r in proximas %}
+        <div class="item">
+          <div class="titulo">{{ r.fecha }} {{ r.hora }} — {{ etiquetas.get(r.tipo, r.tipo) }}</div>
+          <div class="detalle">{{ r.nombre }} · {{ r.telefono }} ·
+            falta ${{ "%.0f"|format((r.precio_total or 0) - (r.monto_pagado or 0)) }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>No hay celebraciones con pago pendiente en los próximos 7 días.</p>
+  {% endif %}
+</div>
+
+<div class="tarjeta">
+  <h2 style="margin-top:0">Accesos rápidos</h2>
+  <a class="boton boton-bloque" href="{{ url_for('nuevo_registro') }}">➕ Nueva acta</a>
+  <a class="boton boton-bloque boton-secundario" href="{{ url_for('agenda') }}">📅 Ver Agenda de Reservaciones</a>
+  <a class="boton boton-bloque boton-secundario" href="{{ url_for('intenciones') }}">🕯 Ver Intenciones de Misa</a>
+  <a class="boton boton-bloque boton-secundario" href="{{ url_for('directorio') }}">📇 Ver Directorio de Servicio</a>
+</div>
+{% endblock %}

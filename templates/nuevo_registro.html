@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block titulo %}Nueva acta{% endblock %}
+{% block contenido %}
+<h2>Nueva acta</h2>
+<p style="font-size:0.8rem;color:#666">
+  Llena solo los campos que apliquen según el tipo de acta. El folio se asigna
+  automáticamente al guardar. (Esta versión web guarda el registro; para
+  generar el PDF con el membrete, hazlo desde el programa de escritorio.)
+</p>
+
+<form method="post" class="tarjeta">
+  <label>Sacramento</label>
+  <select name="sacramento" required>
+    <option value="BAUTISMO">Bautismo</option>
+    <option value="BODA">Matrimonio</option>
+    <option value="COMUNION">Primera Comunión</option>
+    <option value="CONFIRMACION">Confirmación</option>
+  </select>
+
+  <label>Nombre completo</label>
+  <input type="text" name="nombre_completo" required>
+
+  <div style="display:flex; gap:8px">
+    <div style="flex:1"><label>Libro</label><input type="text" name="num_libro"></div>
+    <div style="flex:1"><label>Foja</label><input type="text" name="num_foja"></div>
+    <div style="flex:1"><label>Acta</label><input type="text" name="num_acta"></div>
+  </div>
+
+  <label>Fecha del sacramento</label>
+  <div style="display:flex; gap:8px">
+    <input type="text" name="dia_sacramento" placeholder="Día" style="flex:1">
+    <input type="text" name="mes_sacramento" placeholder="Mes" style="flex:2">
+    <input type="text" name="anio_sacramento" placeholder="Año" style="flex:1">
+  </div>
+
+  <label>Sacerdote (del sacramento)</label>
+  <input type="text" name="sacerdote_sacramento">
+
+  <hr style="border-color:var(--dorado-claro); margin:14px 0">
+
+  <label>Fecha de nacimiento / bautismo</label>
+  <div style="display:flex; gap:8px">
+    <input type="text" name="dia_nacimiento" placeholder="Día" style="flex:1">
+    <input type="text" name="mes_nacimiento" placeholder="Mes" style="flex:2">
+    <input type="text" name="anio_nacimiento" placeholder="Año" style="flex:1">
+  </div>
+  <label>Lugar de nacimiento / bautismo</label>
+  <input type="text" name="lugar_nacimiento">
+
+  <label>Hijo / Hija</label>
+  <select name="hijo">
+    <option value="">(no aplica)</option>
+    <option value="Hijo">Hijo</option>
+    <option value="Hija">Hija</option>
+  </select>
+
+  <label>Padres</label>
+  <input type="text" name="padres">
+
+  <label>Abuelos paternos</label>
+  <input type="text" name="abuelos_paternos">
+  <label>Abuelos maternos</label>
+  <input type="text" name="abuelos_maternos">
+
+  <label>Padrinos</label>
+  <input type="text" name="padrinos">
+  <label>Indicar (padrino/madrina, si aplica)</label>
+  <input type="text" name="indicar" placeholder="padrino / madrina">
+
+  <label>Notas marginales</label>
+  <input type="text" name="notas_marginales">
+
+  <label>Testigos (bodas)</label>
+  <input type="text" name="testigos">
+
+  <hr style="border-color:var(--dorado-claro); margin:14px 0">
+
+  <label>Sacerdote que entrega / firma</label>
+  <input type="text" name="sacerdote_entrega">
+  <label>Cargo</label>
+  <select name="cargo">
+    <option value="Párroco.">Párroco.</option>
+    <option value="Vicario.">Vicario.</option>
+  </select>
+
+  <button type="submit" class="boton-bloque">Guardar acta</button>
+</form>
+{% endblock %}

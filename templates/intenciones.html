@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block titulo %}Intenciones de Misa{% endblock %}
+{% block contenido %}
+<h2>Intenciones de Misa</h2>
+
+<form method="get" class="tarjeta">
+  <label>Fecha</label>
+  <input type="date" name="fecha" value="{{ fecha_texto }}" onchange="this.form.submit()">
+  <label>Horario</label>
+  <select name="hora" onchange="this.form.submit()">
+    {% for h in horarios %}
+      <option value="{{ h }}" {{ 'selected' if h==hora }}>{{ h }}</option>
+    {% endfor %}
+  </select>
+  <p style="font-size:0.8rem;color:#666;margin-top:8px">{{ fecha_larga }} · {{ hora }}</p>
+</form>
+
+<div class="tarjeta">
+  <h2 style="margin-top:0">Agregar intención</h2>
+  <form method="post">
+    <input type="hidden" name="hora" value="{{ hora }}">
+    <label>Categoría</label>
+    <select name="categoria">
+      {% for c in categorias %}
+        <option value="{{ c }}">{{ etiquetas[c] }}</option>
+      {% endfor %}
+    </select>
+    <label>Nombre</label>
+    <input type="text" name="nombre" required>
+    <button type="submit" class="boton-bloque">Agregar</button>
+  </form>
+</div>
+
+<div class="lista-tarjetas">
+  {% for it in lista %}
+    <div class="item">
+      <span class="chip">{{ etiquetas.get(it.categoria, it.categoria) }}</span>
+      {{ it.nombre }}
+      <form method="post" action="{{ url_for('eliminar_intencion', id_intencion=it.id) }}" style="display:inline">
+        <input type="hidden" name="fecha" value="{{ fecha_texto }}">
+        <input type="hidden" name="hora" value="{{ hora }}">
+        <button type="submit" class="boton-peligro" style="padding:2px 8px;font-size:0.7rem">✕</button>
+      </form>
+    </div>
+  {% else %}
+    <p>Sin intenciones capturadas para esta misa todavía.</p>
+  {% endfor %}
+</div>
+{% endblock %}

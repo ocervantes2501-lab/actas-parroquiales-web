@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>{% block titulo %}Actas Parroquiales{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icono.png') }}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Actas">
+</head>
+<body>
+  <header class="app-header">
+    <h1>✝ Parroquia de Ntra. Sra. de Guadalupe</h1>
+    <p>Armería, Colima · Diócesis de Colima</p>
+  </header>
+
+  {% if session.usuario %}
+  <div class="sesion-bar">
+    <span>Sesión: {{ session.usuario }}{% if session.es_admin %} (Admin){% endif %}</span>
+    <a href="{{ url_for('logout') }}">Cerrar sesión</a>
+  </div>
+  {% endif %}
+
+  <main>
+    {% with mensajes = get_flashed_messages(with_categories=true) %}
+      {% for categoria, mensaje in mensajes %}
+        <div class="flash {{ categoria }}">{{ mensaje }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    {% block contenido %}{% endblock %}
+  </main>
+
+  {% if session.usuario %}
+  <nav class="menu-inferior">
+    <a href="{{ url_for('inicio') }}" class="{{ 'activo' if request.endpoint=='inicio' }}">
+      <span class="icono">🏠</span>Inicio
+    </a>
+    <a href="{{ url_for('base_de_datos') }}" class="{{ 'activo' if request.endpoint in ['base_de_datos','nuevo_registro'] }}">
+      <span class="icono">📄</span>Actas
+    </a>
+    <a href="{{ url_for('intenciones') }}" class="{{ 'activo' if request.endpoint=='intenciones' }}">
+      <span class="icono">🕯</span>Intenciones
+    </a>
+    <a href="{{ url_for('agenda') }}" class="{{ 'activo' if request.endpoint=='agenda' }}">
+      <span class="icono">📅</span>Agenda
+    </a>
+    <a href="{{ url_for('directorio') }}" class="{{ 'activo' if request.endpoint=='directorio' }}">
+      <span class="icono">📇</span>Directorio
+    </a>
+  </nav>
+  {% endif %}
+</body>
+</html>
