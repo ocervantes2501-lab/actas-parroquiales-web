@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Agenda de misas especiales</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="app-header">
+    <h1>✝ Parroquia de Ntra. Sra. de Guadalupe</h1>
+    <p>Armería, Colima · Diócesis de Colima</p>
+  </header>
+
+  <main>
+    {% if requiere_clave %}
+      <h2>Agenda de misas especiales</h2>
+      {% if sin_configurar %}
+        <div class="tarjeta">
+          <p>Esta página todavía no tiene una clave de acceso configurada,
+          así que por seguridad no se muestra. Pide al administrador que
+          configure la variable <b>CLAVE_SACERDOTES</b> en Render.</p>
+        </div>
+      {% else %}
+        <p style="font-size:0.85rem; color:#666">
+          Esta agenda es solo para los sacerdotes de la parroquia. Escribe
+          la clave de acceso que te compartieron.
+        </p>
+        {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+        <form method="post" class="tarjeta">
+          <label>Clave de acceso</label>
+          <input type="password" name="clave" required autofocus autocomplete="off">
+          <button type="submit" class="boton-bloque">Entrar</button>
+        </form>
+      {% endif %}
+
+    {% else %}
+      <h2>Misas especiales programadas</h2>
+      <p style="font-size:0.85rem; color:#666">
+        Exequias, XV Años, Bodas, Aniversarios y otras misas especiales, de hoy
+        en adelante. Solo consulta -- para agregar o modificar algo, hazlo
+        desde el programa de la parroquia.
+      </p>
+
+      {% if proximas %}
+        {% set fecha_actual = namespace(valor=None) %}
+        {% for r in proximas %}
+          {% if r.fecha != fecha_actual.valor %}
+            {% if not loop.first %}</div>{% endif %}
+            <h2 style="margin-top:18px; font-size:1rem; color:var(--dorado)">{{ r.fecha }}</h2>
+            <div class="lista-tarjetas">
+            {% set fecha_actual.valor = r.fecha %}
+          {% endif %}
+          <div class="item">
+            <div class="titulo">{{ r.hora }} — {{ etiquetas.get(r.tipo, r.tipo) }}</div>
+            <div class="detalle">
+              {{ r.nombre }}<br>
+              {% if r.lugar %}📍 {{ r.lugar }}<br>{% endif %}
+              {% if r.sacerdote_celebrante %}✝ Celebra: {{ r.sacerdote_celebrante }}<br>{% endif %}
+              {% if r.descripcion %}<em>{{ r.descripcion }}</em>{% endif %}
+            </div>
+          </div>
+          {% if loop.last %}</div>{% endif %}
+        {% endfor %}
+      {% else %}
+        <div class="tarjeta">
+          <p>No hay misas especiales programadas por el momento.</p>
+        </div>
+      {% endif %}
+    {% endif %}
+  </main>
+</body>
+</html>

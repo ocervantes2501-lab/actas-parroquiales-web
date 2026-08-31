@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block titulo %}Agenda de Reservaciones{% endblock %}
+{% block contenido %}
+<h2>Agenda de Reservaciones</h2>
+
+<form class="buscador" method="get">
+  <input type="text" name="q" value="{{ texto }}" placeholder="Buscar por nombre o teléfono">
+  <button type="submit">Buscar</button>
+</form>
+
+<div class="tarjeta">
+  <h2 style="margin-top:0">Nueva reservación</h2>
+  <form method="post" id="form-reservacion">
+    <label>Tipo de misa</label>
+    <select name="tipo" id="tipo-reservacion" onchange="mostrarCamposExequias()">
+      {% for t in tipos %}
+        <option value="{{ t }}">{{ etiquetas[t] }}</option>
+      {% endfor %}
+    </select>
+
+    <label>Fecha</label>
+    <input type="date" name="fecha" required>
+    <label>Hora</label>
+    <input type="text" name="hora" placeholder="Ej. 12:00 PM">
+
+    <label>Nombre</label>
+    <input type="text" name="nombre" required>
+    <label>Teléfono</label>
+    <input type="tel" name="telefono" required>
+
+    <div id="campos-exequias" style="display:none">
+      <label>Edad</label><input type="text" name="edad">
+      <label>Estado civil</label><input type="text" name="estado_civil">
+      <label>Hijos</label><input type="text" name="hijos">
+      <label>Causa de muerte</label><input type="text" name="causa_muerte">
+      <label>Domicilio</label><input type="text" name="domicilio">
+    </div>
+
+    <div id="campos-otra" style="display:none">
+      <label>Descripción</label><textarea name="descripcion" rows="3"></textarea>
+    </div>
+
+    <label>Lugar/Capilla</label>
+    <input type="text" name="lugar" placeholder="Ej. Capilla de San José">
+    <label>Quién la celebra</label>
+    <input type="text" name="sacerdote_celebrante" placeholder="Ej. Pbro. Juan Pérez">
+
+    <label>Precio de la misa ($)</label>
+    <input type="number" name="precio_total" value="{{ precio_default|int }}">
+
+    <button type="submit" class="boton-bloque">Guardar reservación</button>
+  </form>
+</div>
+
+<script>
+function mostrarCamposExequias() {
+  var tipo = document.getElementById('tipo-reservacion').value;
+  document.getElementById('campos-exequias').style.display = (tipo === 'EXEQUIAS') ? 'block' : 'none';
+  document.getElementById('campos-otra').style.display = (tipo === 'OTRA') ? 'block' : 'none';
+}
+mostrarCamposExequias();
+</script>
+
+<div class="lista-tarjetas" style="margin-top:14px">
+  {% for r in reservaciones %}
+    <div class="item">
+      <div class="titulo">{{ r.fecha }} {{ r.hora }} — {{ etiquetas.get(r.tipo, r.tipo) }}</div>
+      <div class="detalle">
+        {{ r.nombre }} · {{ r.telefono }}<br>
+        {% if r.lugar %}📍 {{ r.lugar }}<br>{% endif %}
+        {% if r.sacerdote_celebrante %}✝ Celebra: {{ r.sacerdote_celebrante }}<br>{% endif %}
+        Precio: ${{ "%.0f"|format(r.precio_total or 0) }} ·
+        Pagado: ${{ "%.0f"|format(r.monto_pagado or 0) }} ·
+        <span class="{{ 'estatus-pendiente' if r.estatus=='PENDIENTE' else 'estatus-pagado' }}">{{ r.estatus }}</span>
+      </div>
+      <div class="fila-botones">
+        <form method="post" action="{{ url_for('registrar_pago', id_reservacion=r.id) }}" style="display:flex;gap:4px">
+          <input type="number" name="monto" placeholder="Monto" style="width:90px" required>
+          <button type="submit">Abonar</button>
+        </form>
+        <form method="post" action="{{ url_for('eliminar_reservacion', id_reservacion=r.id) }}"
+              onsubmit="return confirm('¿Eliminar esta reservación?')">
+          <button type="submit" class="boton-peligro">Eliminar</button>
+        </form>
+      </div>
+    </div>
+  {% else %}
+    <p>No hay reservaciones.</p>
+  {% endfor %}
+</div>
+{% endblock %}
