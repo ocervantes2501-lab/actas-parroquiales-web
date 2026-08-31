@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Consultar mi misa</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="app-header">
+    <h1>✝ Parroquia de Ntra. Sra. de Guadalupe</h1>
+    <p>Armería, Colima · Diócesis de Colima</p>
+  </header>
+
+  <main>
+    <h2>Consultar mi misa agendada</h2>
+    <p style="font-size:0.85rem; color:#666">
+      Escribe el teléfono con el que se registró tu Exequia, XV Años, Boda,
+      Aniversario u otra misa especial, para ver la fecha y hora programada.
+    </p>
+
+    <form method="post" class="tarjeta">
+      <label>Teléfono (obligatorio)</label>
+      <input type="tel" name="telefono" required placeholder="10 dígitos">
+      <label>Nombre (opcional, para afinar la búsqueda)</label>
+      <input type="text" name="nombre">
+      <button type="submit" class="boton-bloque">Buscar</button>
+    </form>
+
+    {% if resultados is not none %}
+      {% if resultados %}
+        <div class="lista-tarjetas">
+          {% for r in resultados %}
+            <div class="item">
+              <div class="titulo">{{ etiquetas.get(r.tipo, r.tipo) }}</div>
+              <div class="detalle">
+                {{ r.nombre }}<br>
+                Fecha: {{ r.fecha }} · Hora: {{ r.hora }}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="tarjeta">
+          <p>No encontramos ninguna misa registrada con ese teléfono.
+          Si crees que es un error, comunícate directamente con la parroquia.</p>
+        </div>
+      {% endif %}
+    {% endif %}
+  </main>
+</body>
+</html>
