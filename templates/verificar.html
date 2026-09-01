@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Verificar documento</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="app-header">
+    <h1>✝ Parroquia de Ntra. Sra. de Guadalupe</h1>
+    <p>Armería, Colima · Diócesis de Colima</p>
+  </header>
+
+  <main>
+    <h2>Verificación de autenticidad</h2>
+
+    {% if encontrado and pendiente %}
+      <div class="tarjeta" style="border: 2px solid var(--dorado)">
+        <p style="font-size:1.3rem; color: var(--dorado); font-weight:bold; margin-top:0">
+          ⏳ Boleta emitida, pendiente de registro
+        </p>
+        <p style="font-size:1.1rem; font-weight:bold; margin-bottom:4px">{{ datos.titulo }}</p>
+        <p><b>Nombre:</b> {{ datos.nombre }}</p>
+        <p><b>Fecha de la celebración:</b> {{ datos.fecha }}</p>
+        <p><b>Folio de la boleta:</b> {{ datos.folio }}</p>
+        <p style="font-size:0.8rem; color:#666; margin-top:16px">
+          Esta boleta fue emitida por la parroquia el día de la celebración, pero
+          el acta oficial todavía no se ha registrado en el libro. Cuando se
+          registre, este mismo código mostrará el acta como auténtica.
+        </p>
+      </div>
+    {% elif encontrado %}
+      <div class="tarjeta" style="border: 2px solid var(--verde)">
+        <p style="font-size:1.3rem; color: var(--verde); font-weight:bold; margin-top:0">
+          ✅ Documento auténtico
+        </p>
+        <p style="font-size:1.1rem; font-weight:bold; margin-bottom:4px">{{ datos.titulo }}</p>
+        <p><b>Nombre:</b> {{ datos.nombre }}</p>
+        <p><b>Fecha:</b> {{ datos.fecha }}</p>
+        <p><b>Sacerdote:</b> {{ datos.sacerdote }}</p>
+        {% if datos.extra %}<p>{{ datos.extra }}</p>{% endif %}
+        <p><b>Folio:</b> {{ datos.folio }}</p>
+        <p style="font-size:0.8rem; color:#666; margin-top:16px">
+          Este documento fue emitido por la Parroquia de Ntra. Sra. de Guadalupe,
+          Armería, Colima, y su información coincide con nuestros registros.
+        </p>
+      </div>
+    {% else %}
+      <div class="tarjeta" style="border: 2px solid #B22222">
+        <p style="font-size:1.3rem; color:#B22222; font-weight:bold; margin-top:0">
+          ❌ No se encontró este documento
+        </p>
+        <p>No existe ningún {{ categoria|lower }} con ese folio en nuestros registros.</p>
+        <p style="font-size:0.85rem; color:#666">
+          Si crees que esto es un error, comunícate directamente con la parroquia
+          para confirmar la autenticidad del documento.
+        </p>
+      </div>
+    {% endif %}
+  </main>
+</body>
+</html>
