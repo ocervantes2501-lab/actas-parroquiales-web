@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block titulo %}Usuarios{% endblock %}
+{% block contenido %}
+<h3>{{ 'Usuarios del sistema' if user.rol == 'coordinador_general' else 'Catequistas de mi centro' }}</h3>
+
+<form method="post" class="row g-2 mb-4">
+  <div class="col-md-3"><input class="form-control" name="nombre" placeholder="Nombre completo" required></div>
+  <div class="col-md-2"><input class="form-control" name="usuario" placeholder="Usuario (login)" required></div>
+  <div class="col-md-2"><input class="form-control" type="password" name="password" placeholder="Contraseña" required></div>
+  {% if user.rol == 'coordinador_general' %}
+  <div class="col-md-2">
+    <select class="form-select" name="rol" required>
+      <option value="catequista">Catequista</option>
+      <option value="coordinador_centro">Coordinadora de centro</option>
+      <option value="coordinador_general">Coordinadora general</option>
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select class="form-select" name="centro_id">
+      <option value="">-- centro --</option>
+      {% for c in centros %}<option value="{{ c.id }}">{{ c.nombre }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <div class="col-md-1"><button class="btn btn-danger w-100">Crear</button></div>
+</form>
+
+<table class="table table-striped align-middle">
+  <thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Centro</th><th></th></tr></thead>
+  <tbody>
+  {% for u in usuarios %}
+    <tr>
+      <td>{{ u.nombre }}</td>
+      <td>{{ u.usuario }}</td>
+      <td>{{ u.rol }}</td>
+      <td>{{ u.centro_nombre or '' }}</td>
+      <td class="text-nowrap">
+        <a href="{{ url_for('usuario_editar', usuario_id=u.id) }}" class="btn btn-sm btn-outline-dark">Editar</a>
+        <button class="btn btn-sm btn-outline-warning" type="button" data-bs-toggle="collapse" data-bs-target="#reset{{ u.id }}">Resetear contraseña</button>
+        {% if u.id != user.id %}
+        <form method="post" action="{{ url_for('usuario_baja', usuario_id=u.id) }}" class="d-inline" onsubmit="return confirm('¿Eliminar (dar de baja) a este usuario?');">
+          <button class="btn btn-sm btn-outline-danger">Eliminar</button>
+        </form>
+        {% endif %}
+        <div class="collapse mt-2" id="reset{{ u.id }}">
+          <form method="post" action="{{ url_for('usuario_resetear', usuario_id=u.id) }}" class="d-flex gap-2">
+            <input class="form-control form-control-sm" type="text" name="nueva" placeholder="Nueva contraseña (mín. 6 caracteres)" required minlength="6">
+            <button class="btn btn-sm btn-danger">Guardar</button>
+          </form>
+        </div>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

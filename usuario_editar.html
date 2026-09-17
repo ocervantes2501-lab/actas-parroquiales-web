@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block titulo %}Editar usuario{% endblock %}
+{% block contenido %}
+<h3>Editar a {{ otro.nombre }}</h3>
+<form method="post" class="row g-3">
+  <div class="col-md-6">
+    <label class="form-label">Nombre completo</label>
+    <input class="form-control" name="nombre" value="{{ otro.nombre }}" required>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label">Usuario (login)</label>
+    <input class="form-control" value="{{ otro.usuario }}" disabled>
+    <div class="form-text">El nombre de usuario no se puede cambiar por ahora.</div>
+  </div>
+
+  {% if user.rol == 'coordinador_general' %}
+  <div class="col-md-6">
+    <label class="form-label">Rol</label>
+    <select class="form-select" name="rol">
+      <option value="catequista" {{ 'selected' if otro.rol=='catequista' else '' }}>Catequista</option>
+      <option value="coordinador_centro" {{ 'selected' if otro.rol=='coordinador_centro' else '' }}>Coordinadora de centro</option>
+      <option value="coordinador_general" {{ 'selected' if otro.rol=='coordinador_general' else '' }}>Coordinadora general</option>
+    </select>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label">Centro</label>
+    <select class="form-select" name="centro_id">
+      <option value="">-- sin centro --</option>
+      {% for c in centros %}
+        <option value="{{ c.id }}" {{ 'selected' if otro.centro_id == c.id else '' }}>{{ c.nombre }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% else %}
+  <p class="text-muted">Solo la coordinadora general puede cambiar el rol o el centro de un usuario.</p>
+  {% endif %}
+
+  <div class="col-12">
+    <button class="btn btn-danger">Guardar cambios</button>
+    <a href="{{ url_for('usuarios') }}" class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

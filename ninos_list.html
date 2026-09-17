@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block titulo %}Niños{% endblock %}
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>Niños {{ 'de mi centro' if user.rol=='coordinador_centro' else ('en mi grupo' if user.rol=='catequista' else '(todos los centros)') }}</h3>
+  {% if user.rol in ['coordinador_general','coordinador_centro'] %}
+  <a href="{{ url_for('nino_nuevo') }}" class="btn btn-danger">+ Inscribir niño</a>
+  {% endif %}
+</div>
+<table class="table table-striped align-middle">
+  <thead><tr>
+    <th>Nombre</th><th>Centro</th><th>Libro</th><th>Catequista</th><th>Fecha inscripción</th><th>Estatus</th><th></th>
+  </tr></thead>
+  <tbody>
+  {% for n in ninos %}
+    <tr class="{{ 'table-warning' if n.extemporaneo else '' }}">
+      <td>{{ n.nombre_completo }}</td>
+      <td>{{ n.centro_nombre or '' }}</td>
+      <td>{{ n.libro_nombre or '' }}</td>
+      <td>{{ n.catequista_nombre or '—' }}</td>
+      <td>{{ n.fecha_inscripcion or '' }}</td>
+      <td>{% if n.extemporaneo %}<span class="badge bg-warning text-dark">Extemporáneo</span>{% else %}<span class="badge bg-success">En regla</span>{% endif %}</td>
+      <td>
+        <a href="{{ url_for('expediente_nino', nino_id=n.id) }}" class="btn btn-sm btn-outline-info">Expediente</a>
+        {% if user.rol in ['coordinador_general','coordinador_centro'] %}
+        <a href="{{ url_for('actas_nino', nino_id=n.id) }}" class="btn btn-sm btn-outline-secondary">Actas</a>
+        <a href="{{ url_for('mover_nino', nino_id=n.id) }}" class="btn btn-sm btn-outline-primary">Mover de centro</a>
+        <a href="{{ url_for('nino_editar', nino_id=n.id) }}" class="btn btn-sm btn-outline-dark">Editar</a>
+        <form method="post" action="{{ url_for('nino_baja', nino_id=n.id) }}" class="d-inline" onsubmit="return confirm('¿Dar de baja a este niño?');">
+          <button class="btn btn-sm btn-outline-danger">Baja</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block titulo %}Expediente{% endblock %}
+{% block contenido %}
+<h3>Expediente de {{ nino.nombre_completo }}</h3>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3"><strong>Centro:</strong> {{ nino.centro_nombre or '' }}</div>
+  <div class="col-md-3"><strong>Libro / nivel:</strong> {{ nino.libro_nombre or '' }}</div>
+  <div class="col-md-3"><strong>Catequista:</strong> {{ nino.catequista_nombre or '—' }}</div>
+  <div class="col-md-3">
+    <strong>Estatus:</strong>
+    {% if nino.extemporaneo %}<span class="badge bg-warning text-dark">Extemporáneo</span>{% else %}<span class="badge bg-success">En regla</span>{% endif %}
+  </div>
+  <div class="col-md-3"><strong>Nacimiento:</strong> {{ nino.fecha_nacimiento or '' }}</div>
+  <div class="col-md-3"><strong>Inscripción:</strong> {{ nino.fecha_inscripcion or '' }}</div>
+  <div class="col-md-3"><strong>Padre:</strong> {{ nino.nombre_padre or '' }}</div>
+  <div class="col-md-3"><strong>Madre:</strong> {{ nino.nombre_madre or '' }}</div>
+</div>
+
+{% if user.rol in ['coordinador_general','coordinador_centro'] %}
+<a href="{{ url_for('nino_editar', nino_id=nino.id) }}" class="btn btn-sm btn-outline-dark mb-4">Editar datos generales</a>
+<a href="{{ url_for('mover_nino', nino_id=nino.id) }}" class="btn btn-sm btn-outline-primary mb-4">Mover de centro</a>
+{% endif %}
+
+{% if ve_actas %}
+<h4 class="mt-4">Actas de sacramentos</h4>
+{% if actas %}
+<table class="table table-sm table-striped">
+  <thead><tr><th>Tipo</th><th>Libro</th><th>Acta</th><th>Folio</th><th>Fecha</th><th>Parroquia</th></tr></thead>
+  <tbody>
+  {% for a in actas %}
+    <tr><td>{{ a.tipo }}</td><td>{{ a.libro }}</td><td>{{ a.acta }}</td><td>{{ a.folio }}</td><td>{{ a.fecha }}</td><td>{{ a.parroquia }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="text-muted">Sin actas cargadas todavía.</p>
+{% endif %}
+<a href="{{ url_for('actas_nino', nino_id=nino.id) }}" class="btn btn-sm btn-outline-secondary mb-4">Cargar / ver actas</a>
+{% endif %}
+
+<h4 class="mt-4">Historial de movimientos entre centros</h4>
+{% if movimientos %}
+<table class="table table-sm table-striped">
+  <thead><tr><th>Fecha</th><th>Origen</th><th>Destino</th><th>Registrado por</th><th>Motivo</th></tr></thead>
+  <tbody>
+  {% for m in movimientos %}
+    <tr><td>{{ m.fecha }}</td><td>{{ m.origen_nombre or '—' }}</td><td>{{ m.destino_nombre or '—' }}</td><td>{{ m.usuario_nombre }}</td><td>{{ m.motivo }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="text-muted">Este niño no ha tenido movimientos entre centros.</p>
+{% endif %}
+
+<h4 class="mt-4">Notas y anotaciones de seguimiento</h4>
+<form method="post" class="row g-2 mb-3">
+  <div class="col-md-9"><input class="form-control" name="texto" placeholder="Ej. Faltó a 2 sesiones seguidas, avisar a la mamá" required></div>
+  <div class="col-md-3"><button class="btn btn-danger w-100">Agregar nota</button></div>
+</form>
+{% if notas %}
+<ul class="list-group">
+  {% for n in notas %}
+  <li class="list-group-item">
+    <div class="small text-muted">{{ n.fecha }} — {{ n.autor_nombre or 'desconocido' }}</div>
+    {{ n.texto }}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="text-muted">Sin notas todavía.</p>
+{% endif %}
+
+<a href="{{ url_for('ninos') }}" class="btn btn-outline-secondary mt-4">Volver a la lista</a>
+{% endblock %}
