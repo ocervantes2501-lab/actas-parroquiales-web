@@ -2,8 +2,8 @@ import os
 import datetime
 import libsql_client
 
-TURSO_URL = os.environ.get("TURSO_DATABASE_URL", "")
-TURSO_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "")
+TURSO_URL = os.environ.get("libsql://actas-parroquiales-parroquia.aws-us-west-2.turso.io", "")
+TURSO_TOKEN = os.environ.get("eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTAzNjU3MTQsImlkIjoiMDFhMDUzZTgtZWEwMS03ZWJlLWFhNGItMTRiNDg1OWRjY2JhIiwia2lkIjoiOElxLVhLeS1WcjN1UF8yRWtOdTJWeThoU3FpaFU3OWVtR1Z0UUxvMXdCYyIsInJpZCI6IjhjMmIwNjkxLWY2ZjMtNGU0Yi1hYTkxLTgwNTU3NjczMmJmZSJ9.xPIIfAWQtjataHMFm2vsyzlU8Cdxvzrv2oncPoyXMRjR4xvSQRWDwzT3IgTA8RRsLGYANjHli7a5QG5e6TYPBg", "")
 
 
 def get_client():
