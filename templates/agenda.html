@@ -40,11 +40,6 @@
       <label>Descripción</label><textarea name="descripcion" rows="3"></textarea>
     </div>
 
-    <label>Lugar/Capilla</label>
-    <input type="text" name="lugar" placeholder="Ej. Capilla de San José">
-    <label>Quién la celebra</label>
-    <input type="text" name="sacerdote_celebrante" placeholder="Ej. Pbro. Juan Pérez">
-
     <label>Precio de la misa ($)</label>
     <input type="number" name="precio_total" value="{{ precio_default|int }}">
 
@@ -67,8 +62,6 @@ mostrarCamposExequias();
       <div class="titulo">{{ r.fecha }} {{ r.hora }} — {{ etiquetas.get(r.tipo, r.tipo) }}</div>
       <div class="detalle">
         {{ r.nombre }} · {{ r.telefono }}<br>
-        {% if r.lugar %}📍 {{ r.lugar }}<br>{% endif %}
-        {% if r.sacerdote_celebrante %}✝ Celebra: {{ r.sacerdote_celebrante }}<br>{% endif %}
         Precio: ${{ "%.0f"|format(r.precio_total or 0) }} ·
         Pagado: ${{ "%.0f"|format(r.monto_pagado or 0) }} ·
         <span class="{{ 'estatus-pendiente' if r.estatus=='PENDIENTE' else 'estatus-pagado' }}">{{ r.estatus }}</span>

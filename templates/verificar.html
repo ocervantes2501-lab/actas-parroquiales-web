@@ -8,29 +8,14 @@
 </head>
 <body>
   <header class="app-header">
-    <h1>✝ Parroquia de Ntra. Sra. de Guadalupe</h1>
-    <p>Armería, Colima · Diócesis de Colima</p>
+    <h1>✝ Parroquia de {{ parroquia.nombre_parroquia }}</h1>
+    <p>{{ parroquia.ciudad_estado }} · {{ parroquia.diocesis }}</p>
   </header>
 
   <main>
     <h2>Verificación de autenticidad</h2>
 
-    {% if encontrado and pendiente %}
-      <div class="tarjeta" style="border: 2px solid var(--dorado)">
-        <p style="font-size:1.3rem; color: var(--dorado); font-weight:bold; margin-top:0">
-          ⏳ Boleta emitida, pendiente de registro
-        </p>
-        <p style="font-size:1.1rem; font-weight:bold; margin-bottom:4px">{{ datos.titulo }}</p>
-        <p><b>Nombre:</b> {{ datos.nombre }}</p>
-        <p><b>Fecha de la celebración:</b> {{ datos.fecha }}</p>
-        <p><b>Folio de la boleta:</b> {{ datos.folio }}</p>
-        <p style="font-size:0.8rem; color:#666; margin-top:16px">
-          Esta boleta fue emitida por la parroquia el día de la celebración, pero
-          el acta oficial todavía no se ha registrado en el libro. Cuando se
-          registre, este mismo código mostrará el acta como auténtica.
-        </p>
-      </div>
-    {% elif encontrado %}
+    {% if encontrado %}
       <div class="tarjeta" style="border: 2px solid var(--verde)">
         <p style="font-size:1.3rem; color: var(--verde); font-weight:bold; margin-top:0">
           ✅ Documento auténtico
@@ -41,9 +26,20 @@
         <p><b>Sacerdote:</b> {{ datos.sacerdote }}</p>
         {% if datos.extra %}<p>{{ datos.extra }}</p>{% endif %}
         <p><b>Folio:</b> {{ datos.folio }}</p>
+        {% if datos.estatus_pago %}
+          {% if datos.estatus_pago == "PAGADO" %}
+            <p style="font-size:1.05rem; font-weight:bold; color: var(--verde); margin-top:10px">
+              💰 Acta Validada — Pago al corriente
+            </p>
+          {% else %}
+            <p style="font-size:1.05rem; font-weight:bold; color:#B8860B; margin-top:10px">
+              ⏳ Pendiente de Pago
+            </p>
+          {% endif %}
+        {% endif %}
         <p style="font-size:0.8rem; color:#666; margin-top:16px">
-          Este documento fue emitido por la Parroquia de Ntra. Sra. de Guadalupe,
-          Armería, Colima, y su información coincide con nuestros registros.
+          Este documento fue emitido por la Parroquia de {{ parroquia.nombre_parroquia }},
+          {{ parroquia.ciudad_estado }}, y su información coincide con nuestros registros.
         </p>
       </div>
     {% else %}

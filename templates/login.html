@@ -12,14 +12,6 @@
       <input type="password" name="password" required autocomplete="current-password">
       <button type="submit" class="boton-bloque">Ingresar</button>
     </form>
-    <p style="text-align:center; margin-top:16px; font-size:0.85rem">
-      ¿Eres feligrés y quieres consultar tu misa (boda, XV años, exequia, etc.)?<br>
-      <a href="{{ url_for('consultar_reservacion') }}">Consulta aquí sin necesidad de cuenta</a>
-    </p>
-    <p style="text-align:center; margin-top:8px; font-size:0.85rem">
-      ¿Eres sacerdote y quieres ver la agenda de misas especiales?<br>
-      <a href="{{ url_for('agenda_sacerdotes') }}">Ver agenda aquí sin necesidad de cuenta</a>
-    </p>
   </div>
 </div>
 {% endblock %}

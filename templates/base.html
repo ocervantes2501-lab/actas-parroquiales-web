@@ -11,8 +11,8 @@
 </head>
 <body>
   <header class="app-header">
-    <h1>✝ Parroquia de Ntra. Sra. de Guadalupe</h1>
-    <p>Armería, Colima · Diócesis de Colima</p>
+    <h1>✝ Parroquia de {{ parroquia.nombre_parroquia }}</h1>
+    <p>{{ parroquia.ciudad_estado }} · {{ parroquia.diocesis }}</p>
   </header>
 
   {% if session.usuario %}
