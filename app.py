@@ -53,38 +53,6 @@ def login_requerido(vista):
     return envoltura
 
 
-@app.route("/diagnostico")
-def diagnostico():
-    """
-    Ruta temporal para revisar si esta app esta conectada a la misma
-    base de datos de Turso que el programa de escritorio, sin mostrar
-    nada sensible (contraseñas, token completo). Borrar cuando ya no
-    se necesite.
-    """
-    info = {}
-    info["TURSO_URL configurada"] = bool(db.TURSO_URL)
-    info["TURSO_URL (primeros 25 caracteres)"] = (db.TURSO_URL or "")[:25]
-    info["TURSO_AUTH_TOKEN configurado"] = bool(db.TURSO_AUTH_TOKEN)
-    info["Longitud del token"] = len(db.TURSO_AUTH_TOKEN or "")
-
-    try:
-        conn = db.conectar()
-        cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM usuarios")
-        info["Total de usuarios en la tabla"] = cur.fetchone()[0]
-        cur.execute("SELECT usuario, activo, es_admin FROM usuarios")
-        info["Usuarios (nombre, activo, es_admin)"] = cur.fetchall()
-        cur.execute("SELECT COUNT(*) FROM registros")
-        info["Total de actas en la tabla"] = cur.fetchone()[0]
-        conn.close()
-        info["Conexion"] = "EXITOSA"
-    except Exception as e:
-        info["Conexion"] = f"FALLO: {e}"
-
-    filas = "".join(f"<tr><td style='padding:6px 12px'>{k}</td><td style='padding:6px 12px'><b>{v}</b></td></tr>" for k, v in info.items())
-    return f"<html><body style='font-family:sans-serif'><h2>Diagnóstico</h2><table border=1 style='border-collapse:collapse'>{filas}</table></body></html>"
-
-
 @app.route("/verificar/<categoria>/<int:folio>")
 def verificar(categoria, folio):
     """
@@ -362,6 +330,81 @@ def eliminar_colaborador(id_colaborador):
     db.eliminar_colaborador(id_colaborador)
     flash("Persona eliminada del directorio.", "exito")
     return redirect(url_for("directorio"))
+
+
+# =====================================================
+# Celebraciones pendientes (acceso para los padres)
+# =====================================================
+# Página aparte, SOLO DE CONSULTA, para que los sacerdotes vean las
+# próximas celebraciones desde un enlace, sin usuario: solo con una
+# contraseña compartida. La contraseña se puede cambiar en Render
+# (variable PASSWORD_CELEBRACIONES) sin tocar el código.
+PASSWORD_CELEBRACIONES = os.environ.get("PASSWORD_CELEBRACIONES", "2026")
+
+RANGOS_CELEBRACIONES = {"7": 7, "30": 30, "todas": None}
+
+
+@app.route("/celebraciones", methods=["GET", "POST"])
+def celebraciones():
+    import hmac
+    from datetime import timedelta
+
+    if request.method == "POST":
+        intento = request.form.get("password", "")
+        if hmac.compare_digest(intento.encode(), PASSWORD_CELEBRACIONES.encode()):
+            session["acceso_celebraciones"] = True
+            session.permanent = True  # no pedirla otra vez en ese teléfono por un tiempo
+            return redirect(url_for("celebraciones"))
+        flash("Contraseña incorrecta.", "error")
+        return render_template("celebraciones_acceso.html")
+
+    if not session.get("acceso_celebraciones"):
+        return render_template("celebraciones_acceso.html")
+
+    rango = request.args.get("rango", "30")
+    if rango not in RANGOS_CELEBRACIONES:
+        rango = "30"
+    dias = RANGOS_CELEBRACIONES[rango]
+
+    # El servidor de Render usa hora UTC; se usa la hora de México para
+    # que las celebraciones de la tarde/noche no desaparezcan antes de tiempo.
+    try:
+        from zoneinfo import ZoneInfo
+        hoy = datetime.now(ZoneInfo("America/Mexico_City")).date()
+    except Exception:
+        hoy = date.today()
+    limite = hoy + timedelta(days=dias) if dias is not None else None
+
+    grupos = {}
+    for r in db.listar_reservaciones():
+        try:
+            f = date.fromisoformat(r.get("fecha") or "")
+        except ValueError:
+            continue
+        if f < hoy or (limite and f > limite):
+            continue
+        grupos.setdefault(f, []).append(r)
+
+    dias_ordenados = []
+    for f in sorted(grupos):
+        eventos = sorted(grupos[f], key=lambda r: hm._minutos_desde_medianoche(r.get("hora") or ""))
+        dias_ordenados.append({
+            "fecha_larga": hm.fecha_larga(f),
+            "es_hoy": f == hoy,
+            "eventos": eventos,
+        })
+
+    return render_template(
+        "celebraciones.html",
+        dias=dias_ordenados, rango=rango,
+        etiquetas=db.ETIQUETAS_TIPO_RESERVACION,
+    )
+
+
+@app.route("/celebraciones/salir")
+def celebraciones_salir():
+    session.pop("acceso_celebraciones", None)
+    return redirect(url_for("celebraciones"))
 
 
 if __name__ == "__main__":
