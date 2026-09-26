@@ -27,4 +27,9 @@
   <a class="boton boton-bloque boton-secundario" href="{{ url_for('intenciones') }}">🕯 Ver Intenciones de Misa</a>
   <a class="boton boton-bloque boton-secundario" href="{{ url_for('directorio') }}">📇 Ver Directorio de Servicio</a>
 </div>
+<div class="tarjeta">
+  <h2 style="margin-top:0">🔗 Enlace para los padres</h2>
+  <p style="margin:0 0 8px;font-size:0.9rem">Comparte este enlace para que consulten las celebraciones pendientes con su contraseña:</p>
+  <a class="boton boton-bloque boton-secundario" href="{{ url_for('celebraciones', _external=True) }}">{{ url_for('celebraciones', _external=True) }}</a>
+</div>
 {% endblock %}

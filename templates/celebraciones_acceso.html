@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block titulo %}Celebraciones{% endblock %}
+{% block contenido %}
+<div class="login-wrap">
+  <div class="login-box tarjeta">
+    <h2>📅 Celebraciones pendientes</h2>
+    <p style="font-size:0.9rem">Escribe la contraseña para consultar las próximas celebraciones de la parroquia.</p>
+    <form method="post">
+      <label>Contraseña</label>
+      <input type="password" name="password" required autofocus inputmode="numeric" autocomplete="current-password">
+      <button type="submit" class="boton-bloque">Ver celebraciones</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

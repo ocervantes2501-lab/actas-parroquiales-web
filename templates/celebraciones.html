@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block titulo %}Celebraciones pendientes{% endblock %}
+{% block contenido %}
+<style>
+  .filtros { display:flex; gap:6px; margin-bottom:14px; }
+  .filtros a { flex:1; text-align:center; padding:8px 4px; border-radius:8px; text-decoration:none;
+               border:1px solid var(--dorado-claro); color:var(--verde-oscuro); background:var(--crema-claro); font-size:0.85rem; }
+  .filtros a.activo { background:var(--verde); color:var(--crema); border-color:var(--verde); }
+  .dia-titulo { font-family:Georgia, serif; font-size:1rem; margin:0 0 8px; }
+  .etiqueta-hoy { background:var(--dorado); color:#fff; font-size:0.7rem; padding:2px 8px; border-radius:10px; margin-left:6px; vertical-align:middle; }
+  .evento { border-top:1px solid var(--dorado-claro); padding:10px 0; }
+  .evento:first-of-type { border-top:none; padding-top:0; }
+  .evento .hora { font-weight:bold; font-size:1.05rem; }
+  .evento .tipo { color:var(--dorado); font-weight:bold; }
+  .evento .nombre { margin-top:2px; }
+  .evento .detalle { font-size:0.85rem; margin-top:4px; opacity:0.85; }
+  .evento a { color:var(--verde); }
+  .salir { display:block; text-align:center; margin-top:10px; font-size:0.85rem; color:var(--verde); }
+</style>
+
+<h2>📅 Celebraciones pendientes</h2>
+
+<div class="filtros">
+  <a href="{{ url_for('celebraciones', rango='7') }}" class="{{ 'activo' if rango=='7' }}">7 días</a>
+  <a href="{{ url_for('celebraciones', rango='30') }}" class="{{ 'activo' if rango=='30' }}">30 días</a>
+  <a href="{{ url_for('celebraciones', rango='todas') }}" class="{{ 'activo' if rango=='todas' }}">Todas</a>
+</div>
+
+{% if dias %}
+  {% for d in dias %}
+    <div class="tarjeta">
+      <h3 class="dia-titulo">{{ d.fecha_larga }}{% if d.es_hoy %}<span class="etiqueta-hoy">HOY</span>{% endif %}</h3>
+      {% for r in d.eventos %}
+        <div class="evento">
+          <div><span class="hora">{{ r.hora or "Sin hora" }}</span> · <span class="tipo">{{ etiquetas.get(r.tipo, r.tipo) }}</span></div>
+          <div class="nombre">{{ r.nombre }}</div>
+          {% if r.tipo == "EXEQUIAS" and (r.edad or r.causa_muerte) %}
+            <div class="detalle">{% if r.edad %}Edad: {{ r.edad }}{% endif %}{% if r.edad and r.causa_muerte %} · {% endif %}{% if r.causa_muerte %}{{ r.causa_muerte }}{% endif %}</div>
+          {% endif %}
+          {% if r.descripcion %}<div class="detalle">{{ r.descripcion }}</div>{% endif %}
+          {% if r.telefono %}<div class="detalle">📞 <a href="tel:{{ r.telefono }}">{{ r.telefono }}</a></div>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+{% else %}
+  <div class="tarjeta"><p style="margin:0">No hay celebraciones programadas en este periodo.</p></div>
+{% endif %}
+
+<a class="salir" href="{{ url_for('celebraciones_salir') }}">Salir</a>
+{% endblock %}
