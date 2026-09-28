@@ -20,6 +20,19 @@
         {{ r.dia_sacramento }} de {{ r.mes_sacramento }} de {{ r.anio_sacramento }} —
         {{ r.sacerdote_sacramento }}
       </div>
+      <div class="fila-botones">
+        <a class="boton boton-chico" href="{{ url_for('descargar_acta', pk=r.pk) }}">📄 Descargar PDF</a>
+      </div>
+      <details class="firma-otra">
+        <summary>Descargar con otra firma</summary>
+        <form method="get" action="{{ url_for('descargar_acta', pk=r.pk) }}">
+          <label>Firma</label>
+          <input type="text" name="firma" value="{{ r.sacerdote_entrega or '' }}" placeholder="Nombre del sacerdote">
+          <label>Cargo</label>
+          <input type="text" name="cargo" value="{{ r.cargo or '' }}" placeholder="Ej. Párroco">
+          <button type="submit" class="boton-bloque">📄 Descargar PDF</button>
+        </form>
+      </details>
     </div>
   {% else %}
     <p>No se encontraron registros.</p>

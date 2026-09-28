@@ -16,6 +16,13 @@
 </form>
 
 <div class="tarjeta">
+  <h2 style="margin-top:0">Descargar hojas en PDF</h2>
+  <a class="boton boton-bloque" href="{{ url_for('descargar_intenciones', fecha=fecha_texto, hora=hora, hoja='lectores') }}">📄 Hoja de esta misa ({{ hora }})</a>
+  <a class="boton boton-bloque boton-secundario" href="{{ url_for('descargar_intenciones', fecha=fecha_texto, hora=hora, hoja='padre') }}">📄 Hoja para el Padre (aniversarios y cumpleaños)</a>
+  <a class="boton boton-bloque boton-secundario" href="{{ url_for('descargar_intenciones', fecha=fecha_texto, hora='TODAS', hoja='lectores') }}">📄 Todas las misas del día</a>
+</div>
+
+<div class="tarjeta">
   <h2 style="margin-top:0">Agregar intención</h2>
   <form method="post">
     <input type="hidden" name="hora" value="{{ hora }}">

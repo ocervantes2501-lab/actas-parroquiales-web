@@ -11,24 +11,34 @@ Incluye: inicio de sesión, base de datos de actas
 (consultar/agregar), intenciones de misa, agenda de
 reservaciones (con pagos) y directorio de servicio.
 
-No incluye (por ahora, se puede agregar después): generar
-el PDF con el membrete, firma digital, envío por correo o
-WhatsApp. Esas funciones siguen viviendo en el programa de
-escritorio.
+También permite DESCARGAR EN PDF las actas ya guardadas, las
+hojas de intenciones de misa y las hojas de reservación de la
+agenda (ver documentos_pdf.py).
+
+No incluye (por ahora, se puede agregar después): firma
+digital, envío por correo o WhatsApp. Esas funciones siguen
+viviendo en el programa de escritorio.
 ======================================================
 """
 
+import io
 import os
 from datetime import date, datetime
 from functools import wraps
 
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 import db_web as db
+import documentos_pdf
 import horario_misas as hm
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "cambia-esta-clave-en-produccion")
+# Render atiende por https y le pasa la petición a la app por dentro;
+# esto hace que la app sepa su dirección pública real (se usa en el
+# código QR de las actas descargadas).
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 
 @app.context_processor
@@ -51,6 +61,39 @@ def login_requerido(vista):
             return redirect(url_for("login", siguiente=request.path))
         return vista(*args, **kwargs)
     return envoltura
+
+
+@app.route("/diagnostico")
+@login_requerido
+def diagnostico():
+    """
+    Ruta temporal para revisar si esta app esta conectada a la misma
+    base de datos de Turso que el programa de escritorio, sin mostrar
+    nada sensible (contraseñas, token completo). Borrar cuando ya no
+    se necesite.
+    """
+    info = {}
+    info["TURSO_URL configurada"] = bool(db.TURSO_URL)
+    info["TURSO_URL (primeros 25 caracteres)"] = (db.TURSO_URL or "")[:25]
+    info["TURSO_AUTH_TOKEN configurado"] = bool(db.TURSO_AUTH_TOKEN)
+    info["Longitud del token"] = len(db.TURSO_AUTH_TOKEN or "")
+
+    try:
+        conn = db.conectar()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM usuarios")
+        info["Total de usuarios en la tabla"] = cur.fetchone()[0]
+        cur.execute("SELECT usuario, activo, es_admin FROM usuarios")
+        info["Usuarios (nombre, activo, es_admin)"] = cur.fetchall()
+        cur.execute("SELECT COUNT(*) FROM registros")
+        info["Total de actas en la tabla"] = cur.fetchone()[0]
+        conn.close()
+        info["Conexion"] = "EXITOSA"
+    except Exception as e:
+        info["Conexion"] = f"FALLO: {e}"
+
+    filas = "".join(f"<tr><td style='padding:6px 12px'>{k}</td><td style='padding:6px 12px'><b>{v}</b></td></tr>" for k, v in info.items())
+    return f"<html><body style='font-family:sans-serif'><h2>Diagnóstico</h2><table border=1 style='border-collapse:collapse'>{filas}</table></body></html>"
 
 
 @app.route("/verificar/<categoria>/<int:folio>")
@@ -181,6 +224,85 @@ def nuevo_registro():
         return redirect(url_for("base_de_datos"))
 
     return render_template("nuevo_registro.html", datos={})
+
+
+# =====================================================
+# Descarga de documentos en PDF
+# =====================================================
+def _enviar_pdf(contenido, nombre_archivo):
+    return send_file(
+        io.BytesIO(contenido), mimetype="application/pdf",
+        as_attachment=True, download_name=nombre_archivo,
+    )
+
+
+def _url_publica():
+    return os.environ.get("URL_PUBLICA") or request.url_root
+
+
+@app.route("/base-de-datos/<int:pk>/pdf")
+@login_requerido
+def descargar_acta(pk):
+    """PDF del acta ya guardada, con membrete, folio y QR. Firma quien
+    quedó registrado como 'sacerdote que entrega', a menos que se
+    indique otro en ?firma=...&cargo=..."""
+    registro = db.obtener_registro_por_pk(pk)
+    if registro is None:
+        flash("Esa acta ya no existe.", "error")
+        return redirect(url_for("base_de_datos"))
+    try:
+        contenido = documentos_pdf.generar_acta(
+            registro, url_base=_url_publica(),
+            sacerdote_firma=(request.args.get("firma") or "").strip() or None,
+            cargo=(request.args.get("cargo") or "").strip() or None,
+        )
+    except ValueError as e:
+        flash(str(e), "error")
+        return redirect(url_for("base_de_datos"))
+    return _enviar_pdf(contenido, documentos_pdf.nombre_archivo_acta(registro))
+
+
+@app.route("/intenciones/pdf")
+@login_requerido
+def descargar_intenciones():
+    """Hoja de intenciones de una misa (?hora=...) o de TODAS las misas
+    del día (?hora=TODAS), para lectores (?hoja=lectores) o para el
+    padre (?hoja=padre)."""
+    fecha_texto = request.args.get("fecha") or date.today().isoformat()
+    try:
+        fecha = date.fromisoformat(fecha_texto)
+    except ValueError:
+        flash("Fecha inválida.", "error")
+        return redirect(url_for("intenciones"))
+    hoja = request.args.get("hoja", "lectores")
+    if hoja not in documentos_pdf.HOJAS_INTENCIONES:
+        hoja = "lectores"
+    hora = (request.args.get("hora") or "").strip()
+
+    if not hora or hora == "TODAS":
+        horas = hm.ordenar_horarios(db.listar_horas_con_intenciones(fecha_texto))
+        if not horas:
+            flash("No hay intenciones capturadas para ese día.", "error")
+            return redirect(url_for("intenciones", fecha=fecha_texto))
+        hora_archivo = None
+    else:
+        horas = [hora]
+        hora_archivo = hora
+
+    misas = [(h, db.listar_intenciones(fecha_texto, h)) for h in horas]
+    contenido = documentos_pdf.generar_hoja_intenciones(fecha, misas, hoja)
+    return _enviar_pdf(contenido, documentos_pdf.nombre_archivo_intenciones(fecha, hora_archivo, hoja))
+
+
+@app.route("/agenda/<int:id_reservacion>/pdf")
+@login_requerido
+def descargar_reservacion(id_reservacion):
+    reservacion = db.obtener_reservacion(id_reservacion)
+    if reservacion is None:
+        flash("Esa reservación ya no existe.", "error")
+        return redirect(url_for("agenda"))
+    contenido = documentos_pdf.generar_hoja_reservacion(reservacion)
+    return _enviar_pdf(contenido, documentos_pdf.nombre_archivo_reservacion(reservacion))
 
 
 # =====================================================
@@ -330,81 +452,6 @@ def eliminar_colaborador(id_colaborador):
     db.eliminar_colaborador(id_colaborador)
     flash("Persona eliminada del directorio.", "exito")
     return redirect(url_for("directorio"))
-
-
-# =====================================================
-# Celebraciones pendientes (acceso para los padres)
-# =====================================================
-# Página aparte, SOLO DE CONSULTA, para que los sacerdotes vean las
-# próximas celebraciones desde un enlace, sin usuario: solo con una
-# contraseña compartida. La contraseña se puede cambiar en Render
-# (variable PASSWORD_CELEBRACIONES) sin tocar el código.
-PASSWORD_CELEBRACIONES = os.environ.get("PASSWORD_CELEBRACIONES", "2026")
-
-RANGOS_CELEBRACIONES = {"7": 7, "30": 30, "todas": None}
-
-
-@app.route("/celebraciones", methods=["GET", "POST"])
-def celebraciones():
-    import hmac
-    from datetime import timedelta
-
-    if request.method == "POST":
-        intento = request.form.get("password", "")
-        if hmac.compare_digest(intento.encode(), PASSWORD_CELEBRACIONES.encode()):
-            session["acceso_celebraciones"] = True
-            session.permanent = True  # no pedirla otra vez en ese teléfono por un tiempo
-            return redirect(url_for("celebraciones"))
-        flash("Contraseña incorrecta.", "error")
-        return render_template("celebraciones_acceso.html")
-
-    if not session.get("acceso_celebraciones"):
-        return render_template("celebraciones_acceso.html")
-
-    rango = request.args.get("rango", "30")
-    if rango not in RANGOS_CELEBRACIONES:
-        rango = "30"
-    dias = RANGOS_CELEBRACIONES[rango]
-
-    # El servidor de Render usa hora UTC; se usa la hora de México para
-    # que las celebraciones de la tarde/noche no desaparezcan antes de tiempo.
-    try:
-        from zoneinfo import ZoneInfo
-        hoy = datetime.now(ZoneInfo("America/Mexico_City")).date()
-    except Exception:
-        hoy = date.today()
-    limite = hoy + timedelta(days=dias) if dias is not None else None
-
-    grupos = {}
-    for r in db.listar_reservaciones():
-        try:
-            f = date.fromisoformat(r.get("fecha") or "")
-        except ValueError:
-            continue
-        if f < hoy or (limite and f > limite):
-            continue
-        grupos.setdefault(f, []).append(r)
-
-    dias_ordenados = []
-    for f in sorted(grupos):
-        eventos = sorted(grupos[f], key=lambda r: hm._minutos_desde_medianoche(r.get("hora") or ""))
-        dias_ordenados.append({
-            "fecha_larga": hm.fecha_larga(f),
-            "es_hoy": f == hoy,
-            "eventos": eventos,
-        })
-
-    return render_template(
-        "celebraciones.html",
-        dias=dias_ordenados, rango=rango,
-        etiquetas=db.ETIQUETAS_TIPO_RESERVACION,
-    )
-
-
-@app.route("/celebraciones/salir")
-def celebraciones_salir():
-    session.pop("acceso_celebraciones", None)
-    return redirect(url_for("celebraciones"))
 
 
 if __name__ == "__main__":

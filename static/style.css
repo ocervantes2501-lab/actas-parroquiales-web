@@ -103,6 +103,9 @@ button:active, .boton:active { background: var(--dorado); color: var(--verde-osc
 .boton-bloque { display: block; width: 100%; margin-top: 10px; }
 
 .fila-botones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.boton-chico { padding: 8px 12px; font-size: 0.85rem; }
+details.firma-otra { margin-top: 8px; font-size: 0.8rem; }
+details.firma-otra summary { cursor: pointer; color: var(--verde); }
 .fila-botones form { flex: 1; }
 
 table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }

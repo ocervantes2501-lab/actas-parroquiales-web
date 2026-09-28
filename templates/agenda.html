@@ -67,6 +67,9 @@ mostrarCamposExequias();
         <span class="{{ 'estatus-pendiente' if r.estatus=='PENDIENTE' else 'estatus-pagado' }}">{{ r.estatus }}</span>
       </div>
       <div class="fila-botones">
+        <a class="boton boton-chico boton-secundario" href="{{ url_for('descargar_reservacion', id_reservacion=r.id) }}">📄 Hoja PDF</a>
+      </div>
+      <div class="fila-botones">
         <form method="post" action="{{ url_for('registrar_pago', id_reservacion=r.id) }}" style="display:flex;gap:4px">
           <input type="number" name="monto" placeholder="Monto" style="width:90px" required>
           <button type="submit">Abonar</button>

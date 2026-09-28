@@ -59,28 +59,33 @@ def _fila_a_dict(fila):
 # =====================================================
 # ACTAS (registros)
 # =====================================================
-def buscar_todos(texto_busqueda: str = ""):
+def buscar_todos(texto_busqueda: str = "", limite: int = 100):
+    """Igual que el buscador del escritorio: por folio exacto si es un
+    número, por todas las palabras del nombre si tiene letras, o los
+    más recientes si está vacío. El filtro se hace en SQL (con LIMIT),
+    para no descargar toda la tabla en cada búsqueda."""
     conn = conectar()
     cur = conn.cursor()
-    cur.execute(
-        f"SELECT {','.join(COLUMNAS_TABLA)} FROM registros "
-        f"ORDER BY CAST(id_registro AS INTEGER)"
-    )
-    filas = [_fila_a_dict(f) for f in cur.fetchall()]
-    conn.close()
-
+    columnas_sql = ",".join(COLUMNAS_TABLA)
     texto = _limpiar_texto(texto_busqueda)
     if texto == "":
-        return filas
-    if texto.isdigit():
-        return [f for f in filas if str(f.get("id_registro", "")).strip() == texto]
-    palabras = [p for p in texto.split(" ") if p.strip() != ""]
-
-    def coincide(fila):
-        nombre = _limpiar_texto(str(fila.get("nombre_completo", "")))
-        return all(p.upper() in nombre.upper() for p in palabras)
-
-    return [f for f in filas if coincide(f)]
+        cur.execute(
+            f"SELECT {columnas_sql} FROM registros ORDER BY CAST(id_registro AS INTEGER) DESC LIMIT ?",
+            (limite,),
+        )
+    elif texto.isdigit():
+        cur.execute(f"SELECT {columnas_sql} FROM registros WHERE id_registro = ? LIMIT ?", (int(texto), limite))
+    else:
+        palabras = [p for p in texto.split(" ") if p.strip() != ""]
+        condiciones = " AND ".join("UPPER(nombre_completo) LIKE ?" for _ in palabras)
+        cur.execute(
+            f"SELECT {columnas_sql} FROM registros WHERE {condiciones} "
+            f"ORDER BY CAST(id_registro AS INTEGER) DESC LIMIT ?",
+            (*[f"%{p.upper()}%" for p in palabras], limite),
+        )
+    filas = [_fila_a_dict(f) for f in cur.fetchall()]
+    conn.close()
+    return filas
 
 
 def obtener_nuevo_id():
@@ -273,6 +278,20 @@ def obtener_config_parroquia():
 
 def obtener_precio_misa_default():
     return obtener_config_parroquia()["precio_misa_default"]
+
+
+def listar_plantillas_texto_personalizadas():
+    """Textos de actas personalizados desde el escritorio ("Editar
+    textos de documentos"); {} si nunca se ha personalizado nada."""
+    try:
+        conn = conectar()
+        cur = conn.cursor()
+        cur.execute("SELECT clave, texto FROM plantillas_texto")
+        filas = cur.fetchall()
+        conn.close()
+    except Exception:
+        return {}
+    return {clave: texto for clave, texto in filas}
 
 COLUMNAS_RESERVACION = [
     "id", "tipo", "fecha", "hora", "nombre", "telefono",
