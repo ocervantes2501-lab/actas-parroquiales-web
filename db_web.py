@@ -296,7 +296,7 @@ def listar_plantillas_texto_personalizadas():
 COLUMNAS_RESERVACION = [
     "id", "tipo", "fecha", "hora", "nombre", "telefono",
     "edad", "estado_civil", "hijos", "causa_muerte", "domicilio",
-    "descripcion", "precio_total", "monto_pagado", "estatus",
+    "descripcion", "lugar_celebracion", "precio_total", "monto_pagado", "estatus",
 ]
 
 

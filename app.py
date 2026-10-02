@@ -382,6 +382,7 @@ def agenda():
             causa_muerte=request.form.get("causa_muerte", "").strip(),
             domicilio=request.form.get("domicilio", "").strip(),
             descripcion=request.form.get("descripcion", "").strip(),
+            lugar_celebracion=request.form.get("lugar_celebracion", "").strip(),
             precio_total=precio,
             monto_pagado=0,
             estatus="PENDIENTE",
