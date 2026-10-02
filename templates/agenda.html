@@ -22,6 +22,8 @@
     <input type="date" name="fecha" required>
     <label>Hora</label>
     <input type="text" name="hora" placeholder="Ej. 12:00 PM">
+    <label>Lugar de la celebración</label>
+    <input type="text" name="lugar_celebracion" placeholder="Ej. Iglesia Principal, Capilla, Salón">
 
     <label>Nombre</label>
     <input type="text" name="nombre" required>
@@ -62,6 +64,7 @@ mostrarCamposExequias();
       <div class="titulo">{{ r.fecha }} {{ r.hora }} — {{ etiquetas.get(r.tipo, r.tipo) }}</div>
       <div class="detalle">
         {{ r.nombre }} · {{ r.telefono }}<br>
+        {% if r.lugar_celebracion %}📍 {{ r.lugar_celebracion }}<br>{% endif %}
         Precio: ${{ "%.0f"|format(r.precio_total or 0) }} ·
         Pagado: ${{ "%.0f"|format(r.monto_pagado or 0) }} ·
         <span class="{{ 'estatus-pendiente' if r.estatus=='PENDIENTE' else 'estatus-pagado' }}">{{ r.estatus }}</span>
