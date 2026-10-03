@@ -34,7 +34,7 @@
         <div class="evento">
           <div><span class="hora">{{ r.hora or "Sin hora" }}</span> · <span class="tipo">{{ etiquetas.get(r.tipo, r.tipo) }}</span></div>
           <div class="nombre">{{ r.nombre }}</div>
-          {% if r.lugar_celebracion %}<div class="detalle">📍 {{ r.lugar_celebracion }}</div>{% endif %}
+          {% if r.lugar_celebracion %}<div class="detalle">📍 {{ r.lugar_celebracion }}</div>{% elif r.lugar %}<div class="detalle">📍 {{ r.lugar }}</div>{% endif %}
           {% if r.tipo == "EXEQUIAS" and (r.edad or r.causa_muerte) %}
             <div class="detalle">{% if r.edad %}Edad: {{ r.edad }}{% endif %}{% if r.edad and r.causa_muerte %} · {% endif %}{% if r.causa_muerte %}{{ r.causa_muerte }}{% endif %}</div>
           {% endif %}

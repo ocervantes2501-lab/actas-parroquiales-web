@@ -64,7 +64,7 @@ mostrarCamposExequias();
       <div class="titulo">{{ r.fecha }} {{ r.hora }} — {{ etiquetas.get(r.tipo, r.tipo) }}</div>
       <div class="detalle">
         {{ r.nombre }} · {{ r.telefono }}<br>
-        {% if r.lugar_celebracion %}📍 {{ r.lugar_celebracion }}<br>{% endif %}
+        {% if r.lugar_celebracion %}📍 {{ r.lugar_celebracion }}<br>{% elif r.lugar %}📍 {{ r.lugar }}<br>{% endif %}
         Precio: ${{ "%.0f"|format(r.precio_total or 0) }} ·
         Pagado: ${{ "%.0f"|format(r.monto_pagado or 0) }} ·
         <span class="{{ 'estatus-pendiente' if r.estatus=='PENDIENTE' else 'estatus-pagado' }}">{{ r.estatus }}</span>
