@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block titulo %}Firma y sello{% endblock %}
+{% block contenido %}
+<h2>Firma y sello</h2>
+<p style="font-size:0.8rem;color:#666">
+  Sube aquí la firma del sacerdote y el sello de la parroquia. Se agregan
+  a los PDF que descargas desde la lista de actas. Acepta PNG o JPG; el
+  fondo blanco se vuelve transparente.
+</p>
+
+<form method="post" enctype="multipart/form-data">
+<div class="tarjeta">
+  <h3>Firma del sacerdote</h3>
+  {% if cfg.firma_png_b64 %}
+    <button type="submit" formaction="{{ url_for('quitar_imagen_firma', tipo='firma') }}" class="boton boton-peligro boton-chico" style="margin-bottom:8px">Quitar firma</button>
+  {% else %}
+    <p style="font-size:0.85rem;color:#666">Todavía no hay firma guardada.</p>
+  {% endif %}
+  <label>Cambiar o subir firma</label>
+  <input type="file" name="archivo_firma" accept="image/png,image/jpeg">
+
+  <label>Ancho de la firma (cm)</label>
+  <input type="number" name="ancho_firma_cm" id="ancho_firma_cm" step="0.1" min="1.5" max="8" value="{{ cfg.ancho_firma_cm }}">
+
+  <label>Posición de la firma: arrástrala en la hoja de abajo</label>
+  <div id="hoja" class="hoja-firma">
+    {% if cfg.firma_png_b64 %}
+      <img id="firma-img" src="{{ url_for('imagen_firma', tipo='firma') }}?v={{ cfg.firma_png_b64|length }}" alt="Firma" draggable="false">
+    {% else %}
+      <div class="hoja-vacia">Sube una firma para verla aquí</div>
+    {% endif %}
+    <div id="linea-firma" class="linea-firma"></div>
+    <div class="nombre-firma"><b>Pbro. Nombre del Sacerdote</b><br><b>Párroco.</b></div>
+    <div class="etiqueta-firma">Para constancia firmo:</div>
+  </div>
+  <p id="lectura-posicion" style="font-size:0.8rem;color:#555;margin:6px 0"></p>
+  <p style="font-size:0.75rem;color:#777;margin:0 0 8px">Solo la firma se mueve; la línea y el nombre quedan fijos.</p>
+
+  <div style="display:flex; gap:8px">
+    <div style="flex:1"><label>Mover a la derecha (+) o izquierda (−), cm</label>
+      <input type="number" name="desplazamiento_x_firma_cm" id="dx_firma" step="0.1" min="-4" max="4" value="{{ cfg.desplazamiento_x_firma_cm }}"></div>
+    <div style="flex:1"><label>Mover hacia abajo (+) o arriba (−), cm</label>
+      <input type="number" name="desplazamiento_firma_cm" id="dy_firma" step="0.1" min="-3" max="5" value="{{ cfg.desplazamiento_firma_cm }}"></div>
+  </div>
+  <button type="button" id="restablecer" class="boton boton-secundario boton-chico" style="margin-top:6px">Restablecer posición</button>
+
+  <label style="display:flex;align-items:center;gap:8px">
+    <input type="checkbox" name="usar_firma" value="1" {{ 'checked' if cfg.usar_firma }} style="width:auto"> Incluir la firma al descargar PDF
+  </label>
+</div>
+
+<div class="tarjeta" style="margin-top:12px">
+  <h3>Sello de la parroquia</h3>
+  {% if cfg.sello_png_b64 %}
+    <img src="{{ url_for('imagen_firma', tipo='sello') }}?v={{ cfg.sello_png_b64|length }}" alt="Sello" style="max-width:100%;background:#fffdf8;border:1px solid #ccc;padding:6px">
+    <button type="submit" formaction="{{ url_for('quitar_imagen_firma', tipo='sello') }}" class="boton boton-peligro boton-chico" style="margin-top:6px">Quitar sello</button>
+  {% else %}
+    <p style="font-size:0.85rem;color:#666">Todavía no hay sello guardado.</p>
+  {% endif %}
+  <label>Cambiar o subir sello</label>
+  <input type="file" name="archivo_sello" accept="image/png,image/jpeg">
+
+  <label>Ancho del sello (cm)</label>
+  <input type="number" name="ancho_sello_cm" step="0.1" min="1.5" max="8" value="{{ cfg.ancho_sello_cm }}">
+
+  <label>Bajar el sello (cm, 0 = lo más arriba posible)</label>
+  <input type="number" name="desplazamiento_sello_cm" step="0.1" min="0" max="5" value="{{ cfg.desplazamiento_sello_cm }}">
+
+  <label style="display:flex;align-items:center;gap:8px">
+    <input type="checkbox" name="usar_sello" value="1" {{ 'checked' if cfg.usar_sello }} style="width:auto"> Incluir el sello al descargar PDF
+  </label>
+</div>
+
+<button type="submit" class="boton boton-bloque" style="margin-top:12px">Guardar configuración</button>
+</form>
+
+<style>
+  .hoja-firma { position: relative; width: 340px; max-width: 100%; height: 440px; margin: 6px auto 4px;
+    background: url("{{ url_for('static', filename='membrete.jpeg') }}") center / 100% 100% no-repeat #fffdf8;
+    border: 1px solid #b08d3e; touch-action: none; user-select: none; overflow: hidden; }
+  .hoja-firma img#firma-img { position: absolute; cursor: grab; touch-action: none; }
+  .hoja-vacia { position: absolute; top: 40%; width: 100%; text-align: center; font-size: 0.8rem; color: #777; }
+  .linea-firma { position: absolute; height: 0; border-top: 1px solid #000; }
+  .nombre-firma { position: absolute; width: 100%; text-align: center; font-size: 11px; line-height: 1.2; color: #2F4A38; }
+  .etiqueta-firma { position: absolute; left: 28px; font-size: 11px; color: #1A1A1A; }
+</style>
+
+<script>
+(function () {
+  // Misma escala que el PDF: hoja carta de 21.59 cm en 340 px
+  var PX_CM = 340 / 21.59;
+  var REF_CM = 17.0;               // "Para constancia firmo:"
+  var LINEA_CM = REF_CM + 0.6;     // línea de firma
+  var ALTO_MAX_CM = 2.0;           // misma altura máxima que en el PDF
+  var LIM = { dx: [-4, 4], dy: [-3, 5] };
+
+  var hoja = document.getElementById('hoja');
+  var img = document.getElementById('firma-img');
+  var linea = document.getElementById('linea-firma');
+  var nombre = hoja.querySelector('.nombre-firma');
+  var etiqueta = hoja.querySelector('.etiqueta-firma');
+  var inpAncho = document.getElementById('ancho_firma_cm');
+  var inpDx = document.getElementById('dx_firma');
+  var inpDy = document.getElementById('dy_firma');
+  var lectura = document.getElementById('lectura-posicion');
+
+  function num(v) { var n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? 0 : n; }
+  function clamp(v, r) { return Math.max(r[0], Math.min(r[1], v)); }
+
+  // Posición fija de línea, nombre y etiqueta
+  var lineaTop = LINEA_CM * PX_CM;
+  etiqueta.style.top = (REF_CM * PX_CM) + 'px';
+  nombre.style.top = (lineaTop + 0.25 * PX_CM) + 'px';
+  var anchoLinea = 0;
+
+  function tamanoFirma() {
+    // Igual que en el PDF: ancho pedido, sin pasar la altura máxima
+    if (!img || !img.naturalWidth) return { w: 0, h: 0 };
+    var aspecto = img.naturalWidth / img.naturalHeight;
+    var w = num(inpAncho.value) * PX_CM;
+    var h = w / aspecto;
+    var hMax = ALTO_MAX_CM * PX_CM;
+    if (h > hMax) { h = hMax; w = h * aspecto; }
+    return { w: w, h: h };
+  }
+
+  function colocar() {
+    var dx = clamp(num(inpDx.value), LIM.dx);
+    var dy = clamp(num(inpDy.value), LIM.dy);
+    var t = tamanoFirma();
+    var cx = 170 + dx * PX_CM;
+    if (img && t.w) {
+      img.style.width = t.w + 'px';
+      img.style.height = t.h + 'px';
+      img.style.left = (cx - t.w / 2) + 'px';
+      // Su borde inferior parte de la línea, desplazado dy hacia abajo
+      img.style.top = (lineaTop + dy * PX_CM - t.h) + 'px';
+    }
+    anchoLinea = t.w || 120;
+    linea.style.top = lineaTop + 'px';
+    linea.style.left = (170 - anchoLinea / 2) + 'px';
+    linea.style.width = anchoLinea + 'px';
+    lectura.textContent = 'Firma: ' + Math.abs(dx).toFixed(1) + ' cm ' +
+      (dx >= 0 ? 'a la derecha' : 'a la izquierda') + ' · ' + Math.abs(dy).toFixed(1) + ' cm ' +
+      (dy >= 0 ? 'hacia abajo' : 'hacia arriba');
+  }
+
+  if (img) {
+    if (img.complete) { colocar(); } else { img.addEventListener('load', colocar); }
+    var arrastre = null;
+    img.addEventListener('pointerdown', function (e) {
+      arrastre = { x: e.clientX, y: e.clientY };
+      img.setPointerCapture(e.pointerId);
+      img.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+    img.addEventListener('pointermove', function (e) {
+      if (!arrastre) return;
+      var dxCm = (e.clientX - arrastre.x) / PX_CM;
+      var dyCm = (e.clientY - arrastre.y) / PX_CM;
+      arrastre = { x: e.clientX, y: e.clientY };
+      inpDx.value = (clamp(num(inpDx.value) + dxCm, LIM.dx)).toFixed(2);
+      inpDy.value = (clamp(num(inpDy.value) + dyCm, LIM.dy)).toFixed(2);
+      colocar();
+    });
+    function soltar() { arrastre = null; img.style.cursor = 'grab'; }
+    img.addEventListener('pointerup', soltar);
+    img.addEventListener('pointercancel', soltar);
+  }
+
+  [inpAncho, inpDx, inpDy].forEach(function (el) { el.addEventListener('input', colocar); });
+  document.getElementById('restablecer').addEventListener('click', function () {
+    inpDx.value = '0'; inpDy.value = '0'; colocar();
+  });
+  colocar();
+})();
+</script>
+{% endblock %}

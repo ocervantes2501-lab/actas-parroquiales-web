@@ -9,6 +9,7 @@
 </form>
 
 <a class="boton boton-bloque" href="{{ url_for('nuevo_registro') }}">➕ Nueva acta</a>
+<a class="boton boton-bloque boton-secundario" href="{{ url_for('configurar_firma') }}">✍ Firma y sello para los PDF</a>
 
 <div class="lista-tarjetas" style="margin-top:14px">
   {% for r in registros %}
