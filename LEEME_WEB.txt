@@ -38,6 +38,9 @@ FIRMA Y SELLO EN LOS PDF (nuevo):
   - Los PDF descargados salen con la firma sobre el nombre del
     sacerdote (con su línea) y el sello a la derecha, para enviarlos
     ya firmados y sellados por correo o WhatsApp.
+  - En "Actas", el botón "Vista previa" muestra el acta antes de
+    descargarla, con opción de cambiar la firma y el cargo. Si el
+    documento no se ve en el celular, usa "Descargar PDF".
   - Matrimonio: el nombre de los esposos sale en tres renglones
     (esposo, "Y", esposa).
 

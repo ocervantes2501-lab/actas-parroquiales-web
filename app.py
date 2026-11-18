@@ -244,30 +244,66 @@ def _url_publica():
     return os.environ.get("URL_PUBLICA") or request.url_root
 
 
+def _generar_acta_web(pk):
+    """(registro, pdf_bytes) del acta, o (None, None) si ya no existe.
+    Usa la firma y el sello guardados en la configuración web."""
+    registro = db.obtener_registro_por_pk(pk)
+    if registro is None:
+        return None, None
+    cfg = db.obtener_config_firma()
+    firma_png = firma_web.png_desde_base64(cfg["firma_png_b64"]) if cfg["usar_firma"] else None
+    sello_png = firma_web.png_desde_base64(cfg["sello_png_b64"]) if cfg["usar_sello"] else None
+    contenido = documentos_pdf.generar_acta(
+        registro, url_base=_url_publica(),
+        sacerdote_firma=(request.args.get("firma") or "").strip() or None,
+        cargo=(request.args.get("cargo") or "").strip() or None,
+        firma_png=firma_png, sello_png=sello_png, cfg_firma=cfg,
+    )
+    return registro, contenido
+
+
 @app.route("/base-de-datos/<int:pk>/pdf")
 @login_requerido
 def descargar_acta(pk):
     """PDF del acta ya guardada, con membrete, folio y QR. Firma quien
     quedó registrado como 'sacerdote que entrega', a menos que se
     indique otro en ?firma=...&cargo=..."""
+    try:
+        registro, contenido = _generar_acta_web(pk)
+    except ValueError as e:
+        flash(str(e), "error")
+        return redirect(url_for("base_de_datos"))
+    if registro is None:
+        flash("Esa acta ya no existe.", "error")
+        return redirect(url_for("base_de_datos"))
+    return _enviar_pdf(contenido, documentos_pdf.nombre_archivo_acta(registro))
+
+
+@app.route("/base-de-datos/<int:pk>/pdf/vista")
+@login_requerido
+def acta_pdf_vista(pk):
+    """Mismo PDF, pero para mostrarlo dentro de la vista previa (no se descarga)."""
+    try:
+        registro, contenido = _generar_acta_web(pk)
+    except ValueError as e:
+        return str(e), 400
+    if registro is None:
+        return ("", 404)
+    return send_file(io.BytesIO(contenido), mimetype="application/pdf", as_attachment=False,
+                     download_name=documentos_pdf.nombre_archivo_acta(registro))
+
+
+@app.route("/base-de-datos/<int:pk>/vista-previa")
+@login_requerido
+def vista_previa_acta(pk):
+    """Antes de descargar: se ve el acta tal como saldrá, con la firma y el cargo que se elijan."""
     registro = db.obtener_registro_por_pk(pk)
     if registro is None:
         flash("Esa acta ya no existe.", "error")
         return redirect(url_for("base_de_datos"))
-    cfg = db.obtener_config_firma()
-    firma_png = firma_web.png_desde_base64(cfg["firma_png_b64"]) if cfg["usar_firma"] else None
-    sello_png = firma_web.png_desde_base64(cfg["sello_png_b64"]) if cfg["usar_sello"] else None
-    try:
-        contenido = documentos_pdf.generar_acta(
-            registro, url_base=_url_publica(),
-            sacerdote_firma=(request.args.get("firma") or "").strip() or None,
-            cargo=(request.args.get("cargo") or "").strip() or None,
-            firma_png=firma_png, sello_png=sello_png, cfg_firma=cfg,
-        )
-    except ValueError as e:
-        flash(str(e), "error")
-        return redirect(url_for("base_de_datos"))
-    return _enviar_pdf(contenido, documentos_pdf.nombre_archivo_acta(registro))
+    firma = (request.args.get("firma") or "").strip() or (registro.get("sacerdote_entrega") or "")
+    cargo = (request.args.get("cargo") or "").strip() or (registro.get("cargo") or "")
+    return render_template("vista_previa_acta.html", pk=pk, registro=registro, firma=firma, cargo=cargo)
 
 
 # =====================================================
