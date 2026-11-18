@@ -13,11 +13,38 @@ QUE SI INCLUYE (por ahora):
   - Intenciones de Misa: capturar por fecha y horario
   - Agenda de Reservaciones: agregar, ver, registrar pagos/abonos
   - Directorio de Servicio: agregar y ver colaboradores
+  - DESCARGAR EN PDF (nuevo):
+      * Actas ya guardadas (Bautismo, Matrimonio, Comunión,
+        Confirmación), con membrete, folio y código QR. Botón
+        "Descargar PDF" en cada acta de "Actas". Si hace falta que
+        firme otra persona, usa "Descargar con otra firma".
+      * Hojas de intenciones: de la misa elegida, la hoja para el
+        Padre (aniversarios y cumpleaños), o TODAS las misas del
+        día en un solo PDF. Botones en "Intenciones".
+      * Hoja de reservación (Exequias, XV Años, Boda, etc.). Botón
+        "Hoja PDF" en cada reservación de "Agenda".
+    Se usa la misma redacción que en el escritorio, incluyendo los
+    textos que hayas cambiado en "Editar textos de documentos".
+
+FIRMA Y SELLO EN LOS PDF (nuevo):
+  - Menú "Actas" -> "Firma y sello para los PDF". Sube la firma del
+    sacerdote y el sello de la parroquia (PNG o JPG). Se guardan en la
+    base de datos, así no se pierden al reiniciar Render.
+  - Arrastra la firma sobre la hoja de ejemplo para colocarla donde la
+    necesites (solo se mueve la firma; la línea y el nombre no cambian).
+    También puedes escribir los centímetros a mano.
+  - Ajusta el ancho y la altura de cada uno, y puedes desactivar la
+    firma o el sello para que no salgan en los PDF.
+  - Los PDF descargados salen con la firma sobre el nombre del
+    sacerdote (con su línea) y el sello a la derecha, para enviarlos
+    ya firmados y sellados por correo o WhatsApp.
+  - Matrimonio: el nombre de los esposos sale en tres renglones
+    (esposo, "Y", esposa).
 
 QUE NO INCLUYE TODAVIA (se puede agregar después si lo necesitas):
-  - Generar el PDF del acta con el membrete (eso sigue siendo en
-    el programa de escritorio)
-  - Firma digital
+  - Membrete personalizado subido desde el escritorio (la web usa
+    el membrete original, static/membrete.jpeg; si lo cambias,
+    reemplaza ese archivo)
   - Envío por correo o WhatsApp
   - Corregir un registro ya guardado (por ahora solo se agregan
     nuevos, igual que "Guardar / Generar" del programa de escritorio)
@@ -40,8 +67,18 @@ PASO 1: Subir el código a GitHub (una sola vez)
      "uploading an existing file" (subir un archivo existente).
 
   e) Arrastra TODOS los archivos de esta carpeta (app.py, db_web.py,
-     horario_misas.py, requirements.txt, Procfile, y las carpetas
-     "templates" y "static" completas) a esa página de GitHub.
+     documentos_pdf.py, plantillas_texto.py, horario_misas.py,
+     requirements.txt, Procfile, y las carpetas "templates" y
+     "static" completas -- "static" ahora incluye membrete.jpeg)
+     a esa página de GitHub.
+
+     SI YA TENIAS LA WEB FUNCIONANDO: solo sube (reemplazando) estos
+     archivos y Render la vuelve a publicar sola en unos minutos:
+       app.py, db_web.py, requirements.txt,
+       documentos_pdf.py (nuevo), plantillas_texto.py (nuevo),
+       static/style.css, static/membrete.jpeg (nuevo),
+       templates/base_de_datos.html, templates/intenciones.html,
+       templates/agenda.html
      Espera a que se suban, y presiona "Commit changes".
 
 ---------------------------------------------------------------------

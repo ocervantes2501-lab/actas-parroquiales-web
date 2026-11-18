@@ -37,8 +37,10 @@ from reportlab.platypus import (
 )
 
 import db_web as db
+import firma_web
 import horario_misas as hm
 import plantillas_texto
+from reportlab.platypus import Table, TableStyle
 
 CARPETA = os.path.dirname(os.path.abspath(__file__))
 MEMBRETE_PATH = os.path.join(CARPETA, "static", "membrete.jpeg")
@@ -56,7 +58,7 @@ DORADO = colors.HexColor("#B08D3E")
 NEGRO_SUAVE = colors.HexColor("#1A1A1A")
 ROJO_FOLIO = colors.HexColor("#B22222")
 
-MARGEN_SUPERIOR = 8.0 * cm
+MARGEN_SUPERIOR = 7.0 * cm
 MARGEN_INFERIOR = 2.0 * cm
 MARGEN_IZQUIERDO = 1.6 * cm
 MARGEN_DERECHO = 1.6 * cm
@@ -70,9 +72,14 @@ ESTILO_CUERPO = ParagraphStyle(
     alignment=TA_JUSTIFY, leading=15, spaceAfter=8, textColor=NEGRO_SUAVE,
 )
 ESTILO_NOMBRE = ParagraphStyle(
-    "Nombre", fontName=FUENTE_NEGRITA, fontSize=16,
+    "Nombre", fontName=FUENTE_NEGRITA, fontSize=16, leading=22,
     alignment=TA_CENTER, spaceAfter=8, textColor=VERDE_OSCURO,
 )
+ESTILO_NOMBRE_PAREJA = ParagraphStyle(
+    "NombrePareja", fontName=FUENTE_NEGRITA, fontSize=16, leading=20,
+    alignment=TA_CENTER, spaceAfter=0, textColor=VERDE_OSCURO,
+)
+ANCHO_COLUMNA_LATERAL_CM = 3.5
 ESTILO_ETIQUETA = ParagraphStyle(
     "Etiqueta", fontName=FUENTE_NORMAL, fontSize=12,
     alignment=TA_LEFT, leading=14, spaceAfter=6, textColor=NEGRO_SUAVE,
@@ -121,7 +128,64 @@ def nombre_archivo_acta(registro):
     return f"{prefijo} - {nombre} (folio {registro.get('id_registro')}).pdf"
 
 
-def generar_acta(registro, url_base=None, sacerdote_firma=None, cargo=None, fecha_entrega=None):
+def _elementos_nombres_esposos(nombre_completo):
+    """Matrimonio: 'NOVIO Y NOVIA' sale en tres renglones (novio, 'Y', novia)."""
+    nombre = (nombre_completo or "").strip()
+    if " Y " not in nombre:
+        return [Paragraph(_t(nombre.upper()), ESTILO_NOMBRE)]
+    novio, novia = [parte.strip() for parte in nombre.split(" Y ", 1)]
+    return [
+        Paragraph(_t(novio.upper()), ESTILO_NOMBRE_PAREJA),
+        Paragraph("Y", ESTILO_NOMBRE_PAREJA),
+        Paragraph(_t(novia.upper()), ESTILO_NOMBRE_PAREJA),
+    ]
+
+
+def _bloque_firma(imagen_qr, firma_png, sello_png, sacerdote, cargo, cfg):
+    """
+    Bloque después de 'Para constancia firmo:'.
+    Columna izquierda: QR. Centro: firma (con línea) encima del nombre y
+    cargo, o línea en blanco si no hay firma. Derecha: sello, si hay.
+    """
+    cfg = cfg or {}
+    ancho_util = letter[0] - MARGEN_IZQUIERDO - MARGEN_DERECHO
+    col_lateral = ANCHO_COLUMNA_LATERAL_CM * cm
+    col_centro = ancho_util - 2 * col_lateral
+
+    celda_qr = imagen_qr if imagen_qr is not None else Spacer(1, 1)
+
+    nombres = [Paragraph(_t(sacerdote), ESTILO_FIRMA_NEGRITA), Paragraph(_t(cargo), ESTILO_FIRMA_NEGRITA)]
+    if firma_png:
+        centro = [firma_web.BloqueFirmaWeb(
+            firma_png, float(cfg.get("ancho_firma_cm") or firma_web.ANCHO_FIRMA_DEFAULT_CM),
+            firma_web.ALTO_MAX_FIRMA_CM, col_centro, nombres,
+            dx_cm=cfg.get("desplazamiento_x_firma_cm"), dy_cm=cfg.get("desplazamiento_firma_cm"),
+        )]
+    else:
+        centro = [Spacer(1, 0.9 * cm), Paragraph("_______________________", ESTILO_FIRMA)] + nombres
+
+    celda_sello = Spacer(1, 1)
+    if sello_png:
+        celda_sello = [
+            Spacer(1, float(cfg.get("desplazamiento_sello_cm") or 0) * cm),
+            firma_web.ImagenEnCelda(
+                sello_png, float(cfg.get("ancho_sello_cm") or firma_web.ANCHO_SELLO_DEFAULT_CM),
+                firma_web.ALTO_MAX_SELLO_CM, col_lateral),
+        ]
+
+    tabla = Table([[celda_qr, centro, celda_sello]], colWidths=[col_lateral, col_centro, col_lateral])
+    tabla.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    return [Spacer(1, 0.2 * cm), tabla]
+
+
+def generar_acta(registro, url_base=None, sacerdote_firma=None, cargo=None, fecha_entrega=None,
+                 firma_png=None, sello_png=None, cfg_firma=None):
     """Devuelve el PDF (bytes) del acta guardada en la base de datos.
     La fecha de entrega es la de hoy, y firma quien quedó registrado
     como 'sacerdote que entrega' (se puede cambiar con los parámetros)."""
@@ -140,7 +204,9 @@ def generar_acta(registro, url_base=None, sacerdote_firma=None, cargo=None, fech
         parroquia=parroquia, fecha_sacramento=fecha_sacramento,
         sacerdote_sacramento=d.get("sacerdote_sacramento", ""),
     )
-    nombre = Paragraph(_t((registro.get("nombre_completo") or "").upper()), ESTILO_NOMBRE)
+    es_matrimonio = sacramento in ("BODA", "MATRIMONIO")
+    nombres = (_elementos_nombres_esposos(registro.get("nombre_completo")) if es_matrimonio
+               else [Paragraph(_t((registro.get("nombre_completo") or "").upper()), ESTILO_NOMBRE)])
     entrega = Paragraph(
         plantillas_texto.obtener_texto("acta_entrega", parroquia=parroquia, fecha_entrega=fecha_entrega_txt),
         ESTILO_CUERPO,
@@ -149,7 +215,7 @@ def generar_acta(registro, url_base=None, sacerdote_firma=None, cargo=None, fech
     if sacramento == "BAUTISMO":
         elementos = [
             Paragraph(plantillas_texto.obtener_texto("bautismo_principal", **comunes), ESTILO_CUERPO),
-            nombre, Spacer(1, 0.9 * cm),
+            *nombres, Spacer(1, 0.9 * cm),
             Paragraph(plantillas_texto.obtener_texto(
                 "bautismo_nacimiento", fecha_nacimiento=fecha_nacimiento,
                 lugar_nacimiento=d.get("lugar_nacimiento", ""), hijo=d.get("hijo", ""), padres=d.get("padres", ""),
@@ -160,10 +226,10 @@ def generar_acta(registro, url_base=None, sacerdote_firma=None, cargo=None, fech
             Paragraph(f"<b>Notas Marginales:</b> {d.get('notas_marginales','')}", ESTILO_ETIQUETA),
             entrega,
         ]
-    elif sacramento in ("BODA", "MATRIMONIO"):
+    elif es_matrimonio:
         elementos = [
             Paragraph(plantillas_texto.obtener_texto("boda_principal", **comunes), ESTILO_CUERPO),
-            nombre, Spacer(1, 0.9 * cm),
+            *nombres, Spacer(1, 0.9 * cm),
             Paragraph(f"<b>Siendo testigos:</b> {d.get('testigos','')}.", ESTILO_ETIQUETA),
             Paragraph(f"<b>Siendo padrinos:</b> {d.get('padrinos','')}.", ESTILO_ETIQUETA),
             entrega,
@@ -173,7 +239,7 @@ def generar_acta(registro, url_base=None, sacerdote_firma=None, cargo=None, fech
         texto_bautizado = "Que fue bautizada" if (registro.get("hijo") or "").strip().lower() == "hija" else "Que fue bautizado"
         elementos = [
             Paragraph(plantillas_texto.obtener_texto(clave, **comunes), ESTILO_CUERPO),
-            nombre, Spacer(1, 0.9 * cm),
+            *nombres, Spacer(1, 0.9 * cm),
             Paragraph(plantillas_texto.obtener_texto(
                 "comunion_confirmacion_nacimiento", texto_bautizado=texto_bautizado,
                 fecha_nacimiento=fecha_nacimiento, lugar_nacimiento=d.get("lugar_nacimiento", ""),
@@ -199,13 +265,7 @@ def generar_acta(registro, url_base=None, sacerdote_firma=None, cargo=None, fech
         story.append(Spacer(1, 0.5 * cm))
         story.append(Paragraph("Para constancia firmo:", ESTILO_ETIQUETA))
         qr = _imagen_qr(url_base, "acta", folio)
-        if qr is not None:
-            story.append(Spacer(1, 0.2 * cm))
-            story.append(qr)
-        story.append(Spacer(1, 0.9 * cm))
-        story.append(Paragraph("_______________________", ESTILO_FIRMA))
-        story.append(Paragraph(_t(firma), ESTILO_FIRMA_NEGRITA))
-        story.append(Paragraph(_t(cargo), ESTILO_FIRMA_NEGRITA))
+        story.extend(_bloque_firma(qr, firma_png, sello_png, firma, cargo, cfg_firma))
         fondo = _fondo_con_folio(folio)
         doc.build(story, onFirstPage=fondo, onLaterPages=fondo)
 

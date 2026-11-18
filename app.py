@@ -21,6 +21,7 @@ viviendo en el programa de escritorio.
 ======================================================
 """
 
+import base64
 import io
 import os
 from datetime import date, datetime
@@ -31,6 +32,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 import db_web as db
 import documentos_pdf
+import firma_web
 import horario_misas as hm
 
 app = Flask(__name__)
@@ -39,6 +41,8 @@ app.secret_key = os.environ.get("SECRET_KEY", "cambia-esta-clave-en-produccion")
 # esto hace que la app sepa su dirección pública real (se usa en el
 # código QR de las actas descargadas).
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+# Imágenes de firma y sello: máximo 3 MB por archivo.
+app.config["MAX_CONTENT_LENGTH"] = 3 * 1024 * 1024
 
 
 @app.context_processor
@@ -250,16 +254,90 @@ def descargar_acta(pk):
     if registro is None:
         flash("Esa acta ya no existe.", "error")
         return redirect(url_for("base_de_datos"))
+    cfg = db.obtener_config_firma()
+    firma_png = firma_web.png_desde_base64(cfg["firma_png_b64"]) if cfg["usar_firma"] else None
+    sello_png = firma_web.png_desde_base64(cfg["sello_png_b64"]) if cfg["usar_sello"] else None
     try:
         contenido = documentos_pdf.generar_acta(
             registro, url_base=_url_publica(),
             sacerdote_firma=(request.args.get("firma") or "").strip() or None,
             cargo=(request.args.get("cargo") or "").strip() or None,
+            firma_png=firma_png, sello_png=sello_png, cfg_firma=cfg,
         )
     except ValueError as e:
         flash(str(e), "error")
         return redirect(url_for("base_de_datos"))
     return _enviar_pdf(contenido, documentos_pdf.nombre_archivo_acta(registro))
+
+
+# =====================================================
+# Firma y sello (imágenes para las actas en PDF)
+# =====================================================
+TIPOS_IMAGEN = {"firma": "firma_png_b64", "sello": "sello_png_b64"}
+
+
+def _flotante(valor, minimo, maximo, respaldo):
+    try:
+        numero = float(str(valor).replace(",", "."))
+    except (TypeError, ValueError):
+        return respaldo
+    return max(minimo, min(numero, maximo))
+
+
+@app.route("/configuracion/firma", methods=["GET", "POST"])
+@login_requerido
+def configurar_firma():
+    if request.method == "POST":
+        cambios = {}
+        for tipo, columna in TIPOS_IMAGEN.items():
+            archivo = request.files.get(f"archivo_{tipo}")
+            if archivo and archivo.filename:
+                try:
+                    png = firma_web.preparar_png(archivo.read())
+                except Exception:
+                    flash(f"No se pudo leer la imagen de {tipo}. Usa un archivo PNG o JPG.", "error")
+                    return redirect(url_for("configurar_firma"))
+                cambios[columna] = base64.b64encode(png).decode("ascii")
+        cambios["ancho_firma_cm"] = _flotante(request.form.get("ancho_firma_cm"),
+                                              firma_web.ANCHO_CM_MINIMO, firma_web.ANCHO_CM_MAXIMO,
+                                              firma_web.ANCHO_FIRMA_DEFAULT_CM)
+        dx_firma, dy_firma = firma_web.limitar_posicion(
+            _flotante(request.form.get("desplazamiento_x_firma_cm"), -10, 10, 0.0),
+            _flotante(request.form.get("desplazamiento_firma_cm"), -10, 10, 0.0))
+        cambios["desplazamiento_x_firma_cm"] = round(dx_firma, 2)
+        cambios["desplazamiento_firma_cm"] = round(dy_firma, 2)
+        cambios["ancho_sello_cm"] = _flotante(request.form.get("ancho_sello_cm"),
+                                              firma_web.ANCHO_CM_MINIMO, firma_web.ANCHO_CM_MAXIMO,
+                                              firma_web.ANCHO_SELLO_DEFAULT_CM)
+        cambios["desplazamiento_sello_cm"] = _flotante(request.form.get("desplazamiento_sello_cm"),
+                                                       0, firma_web.DESPLAZAMIENTO_CM_MAXIMO, 0.0)
+        cambios["usar_firma"] = 1 if request.form.get("usar_firma") else 0
+        cambios["usar_sello"] = 1 if request.form.get("usar_sello") else 0
+        db.guardar_config_firma(**cambios)
+        flash("Firma y sello guardados.", "exito")
+        return redirect(url_for("configurar_firma"))
+    return render_template("configurar_firma.html", cfg=db.obtener_config_firma())
+
+
+@app.route("/configuracion/firma/quitar/<tipo>", methods=["POST"])
+@login_requerido
+def quitar_imagen_firma(tipo):
+    if tipo not in TIPOS_IMAGEN:
+        return redirect(url_for("configurar_firma"))
+    db.guardar_config_firma(**{TIPOS_IMAGEN[tipo]: None})
+    flash(f"Se quitó la imagen de {tipo}.", "exito")
+    return redirect(url_for("configurar_firma"))
+
+
+@app.route("/configuracion/firma/imagen/<tipo>")
+@login_requerido
+def imagen_firma(tipo):
+    if tipo not in TIPOS_IMAGEN:
+        return ("", 404)
+    png = firma_web.png_desde_base64(db.obtener_config_firma()[TIPOS_IMAGEN[tipo]])
+    if png is None:
+        return ("", 404)
+    return send_file(io.BytesIO(png), mimetype="image/png")
 
 
 @app.route("/intenciones/pdf")
@@ -382,7 +460,6 @@ def agenda():
             causa_muerte=request.form.get("causa_muerte", "").strip(),
             domicilio=request.form.get("domicilio", "").strip(),
             descripcion=request.form.get("descripcion", "").strip(),
-            lugar_celebracion=request.form.get("lugar_celebracion", "").strip(),
             precio_total=precio,
             monto_pagado=0,
             estatus="PENDIENTE",
@@ -453,81 +530,6 @@ def eliminar_colaborador(id_colaborador):
     db.eliminar_colaborador(id_colaborador)
     flash("Persona eliminada del directorio.", "exito")
     return redirect(url_for("directorio"))
-
-
-# =====================================================
-# Celebraciones pendientes (acceso para los padres)
-# =====================================================
-# Página aparte, SOLO DE CONSULTA, para que los sacerdotes vean las
-# próximas celebraciones desde un enlace, sin usuario: solo con una
-# contraseña compartida. La contraseña se puede cambiar en Render
-# (variable PASSWORD_CELEBRACIONES) sin tocar el código.
-PASSWORD_CELEBRACIONES = os.environ.get("PASSWORD_CELEBRACIONES", "2026")
-
-RANGOS_CELEBRACIONES = {"7": 7, "30": 30, "todas": None}
-
-
-@app.route("/celebraciones", methods=["GET", "POST"])
-def celebraciones():
-    import hmac
-    from datetime import timedelta
-
-    if request.method == "POST":
-        intento = request.form.get("password", "")
-        if hmac.compare_digest(intento.encode(), PASSWORD_CELEBRACIONES.encode()):
-            session["acceso_celebraciones"] = True
-            session.permanent = True  # no pedirla otra vez en ese teléfono por un tiempo
-            return redirect(url_for("celebraciones"))
-        flash("Contraseña incorrecta.", "error")
-        return render_template("celebraciones_acceso.html")
-
-    if not session.get("acceso_celebraciones"):
-        return render_template("celebraciones_acceso.html")
-
-    rango = request.args.get("rango", "30")
-    if rango not in RANGOS_CELEBRACIONES:
-        rango = "30"
-    dias = RANGOS_CELEBRACIONES[rango]
-
-    # El servidor de Render usa hora UTC; se usa la hora de México para
-    # que las celebraciones de la tarde/noche no desaparezcan antes de tiempo.
-    try:
-        from zoneinfo import ZoneInfo
-        hoy = datetime.now(ZoneInfo("America/Mexico_City")).date()
-    except Exception:
-        hoy = date.today()
-    limite = hoy + timedelta(days=dias) if dias is not None else None
-
-    grupos = {}
-    for r in db.listar_reservaciones():
-        try:
-            f = date.fromisoformat(r.get("fecha") or "")
-        except ValueError:
-            continue
-        if f < hoy or (limite and f > limite):
-            continue
-        grupos.setdefault(f, []).append(r)
-
-    dias_ordenados = []
-    for f in sorted(grupos):
-        eventos = sorted(grupos[f], key=lambda r: hm._minutos_desde_medianoche(r.get("hora") or ""))
-        dias_ordenados.append({
-            "fecha_larga": hm.fecha_larga(f),
-            "es_hoy": f == hoy,
-            "eventos": eventos,
-        })
-
-    return render_template(
-        "celebraciones.html",
-        dias=dias_ordenados, rango=rango,
-        etiquetas=db.ETIQUETAS_TIPO_RESERVACION,
-    )
-
-
-@app.route("/celebraciones/salir")
-def celebraciones_salir():
-    session.pop("acceso_celebraciones", None)
-    return redirect(url_for("celebraciones"))
 
 
 if __name__ == "__main__":

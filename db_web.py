@@ -296,7 +296,7 @@ def listar_plantillas_texto_personalizadas():
 COLUMNAS_RESERVACION = [
     "id", "tipo", "fecha", "hora", "nombre", "telefono",
     "edad", "estado_civil", "hijos", "causa_muerte", "domicilio",
-    "descripcion", "precio_total", "monto_pagado", "estatus", "lugar", "sacerdote_celebrante", "lugar_celebracion",
+    "descripcion", "precio_total", "monto_pagado", "estatus",
 ]
 
 
@@ -539,3 +539,76 @@ def obtener_constancia_por_folio(folio: int):
         return None
     return dict(zip(COLUMNAS_CONSTANCIA, fila))
 
+
+
+# =====================================================
+# Firma y sello para las actas descargadas en PDF
+# (las imágenes se guardan en base64 en la base de datos,
+#  porque Render no conserva archivos entre reinicios)
+# =====================================================
+CONFIG_FIRMA_DEFAULT = {
+    "firma_png_b64": None,
+    "sello_png_b64": None,
+    "ancho_firma_cm": 4.5,
+    "desplazamiento_firma_cm": 0.0,
+    "desplazamiento_x_firma_cm": 0.0,
+    "ancho_sello_cm": 3.0,
+    "desplazamiento_sello_cm": 0.0,
+    "usar_firma": True,
+    "usar_sello": True,
+}
+COLUMNAS_CONFIG_FIRMA = list(CONFIG_FIRMA_DEFAULT.keys())
+
+
+def _asegurar_tabla_config_firma(cur):
+    cur.execute(
+        "CREATE TABLE IF NOT EXISTS config_firma_web ("
+        " id INTEGER PRIMARY KEY CHECK (id = 1),"
+        " firma_png_b64 TEXT, sello_png_b64 TEXT,"
+        " ancho_firma_cm REAL, desplazamiento_firma_cm REAL,"
+        " ancho_sello_cm REAL, desplazamiento_sello_cm REAL,"
+        " usar_firma INTEGER, usar_sello INTEGER)"
+    )
+    # Tablas creadas antes de esta versión: agregar la columna de movimiento horizontal
+    try:
+        cur.execute("ALTER TABLE config_firma_web ADD COLUMN desplazamiento_x_firma_cm REAL")
+    except Exception:
+        pass  # ya existe
+
+
+def obtener_config_firma():
+    """Firma y sello guardados; si aún no hay nada, valores por defecto."""
+    try:
+        conn = conectar()
+        cur = conn.cursor()
+        _asegurar_tabla_config_firma(cur)
+        cur.execute(f"SELECT {', '.join(COLUMNAS_CONFIG_FIRMA)} FROM config_firma_web WHERE id = 1")
+        fila = cur.fetchone()
+        conn.close()
+    except Exception:
+        fila = None
+    if fila is None:
+        return dict(CONFIG_FIRMA_DEFAULT)
+    cfg = dict(zip(COLUMNAS_CONFIG_FIRMA, fila))
+    for clave in ("usar_firma", "usar_sello"):
+        cfg[clave] = bool(cfg[clave]) if cfg[clave] is not None else CONFIG_FIRMA_DEFAULT[clave]
+    for clave in ("ancho_firma_cm", "desplazamiento_firma_cm", "desplazamiento_x_firma_cm",
+                  "ancho_sello_cm", "desplazamiento_sello_cm"):
+        if cfg[clave] is None:
+            cfg[clave] = CONFIG_FIRMA_DEFAULT[clave]
+    return cfg
+
+
+def guardar_config_firma(**campos):
+    """Actualiza solo los campos indicados (los nombres se validan contra la lista)."""
+    for columna in campos:
+        if columna not in COLUMNAS_CONFIG_FIRMA:
+            raise ValueError(f"Campo de firma desconocido: {columna}")
+    conn = conectar()
+    cur = conn.cursor()
+    _asegurar_tabla_config_firma(cur)
+    cur.execute("INSERT OR IGNORE INTO config_firma_web (id) VALUES (1)")
+    for columna, valor in campos.items():
+        cur.execute(f"UPDATE config_firma_web SET {columna} = ? WHERE id = 1", [valor])
+    conn.commit()
+    conn.close()
