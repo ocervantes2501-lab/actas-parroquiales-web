@@ -22,6 +22,7 @@
         {{ r.sacerdote_sacramento }}
       </div>
       <div class="fila-botones">
+        <a class="boton boton-chico boton-secundario" href="{{ url_for('vista_previa_acta', pk=r.pk) }}">👁 Vista previa</a>
         <a class="boton boton-chico" href="{{ url_for('descargar_acta', pk=r.pk) }}">📄 Descargar PDF</a>
       </div>
       <details class="firma-otra">

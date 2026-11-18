@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block titulo %}Vista previa del acta{% endblock %}
+{% block contenido %}
+<h2>Vista previa del acta</h2>
+<p style="font-size:0.85rem;color:#444">
+  <b>{{ registro.nombre_completo }}</b> · Folio {{ registro.id_registro }}
+</p>
+
+<form method="get" class="tarjeta">
+  <label>Firma (sacerdote que firma)</label>
+  <input type="text" name="firma" value="{{ firma }}" placeholder="Nombre del sacerdote">
+  <label>Cargo</label>
+  <input type="text" name="cargo" value="{{ cargo }}" placeholder="Párroco.">
+  <button type="submit" class="boton boton-secundario boton-bloque">Actualizar vista previa</button>
+</form>
+
+<div class="fila-botones" style="margin:12px 0">
+  <a class="boton" href="{{ url_for('descargar_acta', pk=pk, firma=firma, cargo=cargo) }}">📄 Descargar PDF</a>
+  <a class="boton boton-secundario" href="{{ url_for('base_de_datos') }}">Volver</a>
+</div>
+
+<iframe src="{{ url_for('acta_pdf_vista', pk=pk, firma=firma, cargo=cargo) }}"
+        title="Vista previa del acta"
+        style="width:100%;height:75vh;min-height:480px;border:1px solid #b08d3e;border-radius:6px;background:#fff"></iframe>
+<p style="font-size:0.75rem;color:#666">
+  Si en tu celular no se alcanza a ver el documento aquí, usa "Descargar PDF".
+</p>
+{% endblock %}
